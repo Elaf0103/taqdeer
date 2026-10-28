@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/banner.png" alt="Taqdeer: AI-assisted grading for paper exams" width="720">
+  <img src="docs/banner.png" alt="Taqdeer: AI-assisted exam grading" width="720">
 </p>
 
-<p align="center"><b>AI-assisted grading for scanned paper exams, with topic-level learning gap analytics</b></p>
+<p align="center"><b>AI-assisted grading for paper and digital exams, with topic-level learning gap analytics</b></p>
 
 <p align="center">
   <a href="https://taqdeerdemo.netlify.app"><b>Live demo</b></a> ·
@@ -18,11 +18,11 @@ Grading written exams by hand takes days, scores vary between graders, and it is
 
 ## What Taqdeer does
 
-Taqdeer takes an exam from scanned paper to approved grades and class insights, while the instructor stays in control of every final mark.
+Taqdeer takes an exam from uploaded answer files to approved grades and class insights, while the instructor stays in control of every final mark. It works with digital answer files and with scanned handwritten papers.
 
 1. **Exam setup.** The instructor creates the exam: course, section, number of students and total marks.
-2. **Answer key extraction.** The answer key PDF is turned into structured questions, model answers and marks.
-3. **Student answer extraction.** Scanned answer sheets are read with AI, including handwritten text, selected options and hand-drawn diagrams.
+2. **Answer key extraction.** The answer key, digital or scanned, is turned into structured questions, model answers and marks.
+3. **Student answer extraction.** Student answer files are read with AI. For scanned paper, this includes handwritten text, selected options and hand-drawn diagrams.
 4. **Consensus grading.** Claude and ChatGPT grade each answer independently. When they disagree, a consensus step resolves the score and records the reasoning.
 5. **Instructor review.** The instructor sees every score with the AI's reasoning, edits any mark (tracked as an override) and approves the results.
 6. **Learning gap analytics.** After approval, the Qwen model analyses the class by question and topic, rates each gap by severity, explains the misconception and suggests a teaching action.
@@ -84,11 +84,11 @@ Create an empty MySQL database named `taqdeer`; the tables are created on first 
 
 ## Privacy
 
-Student exam papers used during development were anonymized before being sent to any AI model. No exam files or student data are included in this repository.
+Participants gave their consent through a privacy and participation consent form before taking part. Student exam papers used during development were anonymized before being sent to any AI model. No exam files or student data are included in this repository.
 
 ## Team
 
-- **Elaf Alyoubi** (Team Lead)
+- Elaf Alyoubi
 - Alyah Alshareef
 - Norma Atawi
 
