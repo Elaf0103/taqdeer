@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js"></script>
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    /* ── Topbar ──────────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 14px 20px; margin-bottom: 24px;
+      border-radius: var(--radius-lg);
+    }
+    .topbar-left h2 { margin: 0; font-size: 20px; }
+    .topbar-left .bc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 14px 5px 5px; border-radius: 999px;
+      background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border);
+      font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer;
+      transition: background var(--t); text-decoration: none;
+    }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800;
+      overflow: hidden;
+    }
+    .chip-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+    /* ── Layout ──────────────────────────────────────────────────────────────── */
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 860px) { .profile-layout { grid-template-columns: 1fr; } }
+
+    /* ── Profile card (left) ─────────────────────────────────────────────────── */
+    .profile-card {
+      padding: 28px 24px;
+      border-radius: var(--radius-lg);
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+
+    .avatar-wrap { position: relative; display: inline-block; }
+    .avatar {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center;
+      font-size: 30px; font-weight: 800; color: #fff;
+      border: 3px solid rgba(255,255,255,0.6);
+      box-shadow: 0 8px 24px rgba(68,107,149,0.28);
+      user-select: none; overflow: hidden;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-edit-btn {
+      position: absolute; bottom: 2px; right: 2px;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      border: 2px solid #fff;
+      display: grid; place-items: center; cursor: pointer;
+      transition: transform var(--t);
+    }
+    .avatar-edit-btn:hover { transform: scale(1.1); }
+    .avatar-edit-btn svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .profile-name { font-size: 17px; font-weight: 800; color: var(--text-strong); margin: 0; }
+    .profile-title { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+    .profile-divider { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(208,223,235,0.7), transparent); }
+
+    .profile-info-list { width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+    .info-row {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .info-row svg { width: 15px; height: 15px; stroke: var(--c-powder); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .info-row span { color: var(--text); }
+
+    .btn-change-photo {
+      padding: 7px 18px; border-radius: 8px; cursor: pointer;
+      border: 1.5px solid rgba(208,223,235,.9); background: rgba(255,255,255,0.4);
+      color: var(--text-strong); font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-change-photo:hover { background: rgba(255,255,255,0.8); border-color: var(--c-powder); }
+
+    .role-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 999px;
+      background: linear-gradient(135deg, rgba(104,149,188,0.15), rgba(68,107,149,0.12));
+      border: 1px solid rgba(104,149,188,0.35);
+      font-size: 12px; font-weight: 700; color: var(--c-arctic);
+    }
+    .role-badge svg { width: 13px; height: 13px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Right column ────────────────────────────────────────────────────────── */
+    .right-col { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ── Section card ────────────────────────────────────────────────────────── */
+    .section-card { padding: 24px 26px; border-radius: var(--radius-lg); }
+    .section-head {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 22px; padding-bottom: 16px;
+      border-bottom: 1px solid rgba(208,223,235,0.5);
+    }
+    .section-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .section-icon svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .section-icon.blue   { background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); }
+    .section-icon.amber  { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .section-head-text h3 { margin: 0; font-size: 15px; color: var(--text-strong); }
+    .section-head-text p  { margin: 0; font-size: 12px; color: var(--text-muted); }
+
+    /* ── Preference rows ─────────────────────────────────────────────────────── */
+    .pref-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 0; border-bottom: 1px solid rgba(208,223,235,0.4);
+    }
+    .pref-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .pref-row-text .pref-label { font-size: 13px; font-weight: 600; color: var(--text-strong); }
+    .pref-row-text .pref-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    /* Toggle switch */
+    .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0; border-radius: 11px;
+      background: rgba(208,223,235,0.9); cursor: pointer; transition: background .2s;
+    }
+    .toggle-track::before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; top: 3px; left: 3px;
+      transition: transform .2s; box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    }
+    .toggle-switch input:checked + .toggle-track { background: #059669; }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
+
+    /* ── Form fields ─────────────────────────────────────────────────────────── */
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 540px) { .field-grid { grid-template-columns: 1fr; } }
+    .field-full { grid-column: 1 / -1; }
+
+    .field-group { display: flex; flex-direction: column; gap: 7px; }
+    .field-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .field-label svg { width: 12px; height: 12px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .field-input {
+      width: 100%; padding: 11px 13px;
+      border-radius: 11px; border: 1.5px solid rgba(208,223,235,.85);
+      background: rgba(255,255,255,.55); color: var(--text-strong);
+      font-size: 13px; outline: none; box-sizing: border-box;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .field-input:focus { border-color: var(--c-ice); background: rgba(255,255,255,.9); box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+    .field-input.invalid { border-color: #ef4444; background: rgba(255,245,245,.8); }
+    .field-input.invalid:focus { box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+    .field-err { font-size: 11px; color: #ef4444; display: none; align-items: center; gap: 4px; }
+    .field-err.show { display: flex; }
+    .field-err::before { content: '!'; width: 13px; height: 13px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0; }
+
+    /* Read-only field */
+    .field-input[readonly] {
+      background: rgba(208,223,235,.2);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      border-style: dashed;
+    }
+    .field-input[readonly]:focus { border-color: rgba(208,223,235,.85); box-shadow: none; background: rgba(208,223,235,.2); }
+    .readonly-note {
+      font-size: 11px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .readonly-note svg { width: 11px; height: 11px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Password toggle */
+    .pass-wrap { position: relative; }
+    .pass-wrap .field-input { padding-right: 40px; }
+    .pass-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; padding: 2px;
+      display: grid; place-items: center;
+    }
+    .pass-toggle svg { width: 16px; height: 16px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Password strength bar */
+    .strength-wrap { display: flex; align-items: center; gap: 8px; }
+    .strength-bars { display: flex; gap: 3px; }
+    .strength-bar {
+      width: 32px; height: 4px; border-radius: 2px;
+      background: rgba(208,223,235,.5);
+      transition: background .25s;
+    }
+    .strength-label { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+
+    /* ── Action buttons ──────────────────────────────────────────────────────── */
+    .form-actions {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: 10px; margin-top: 22px; padding-top: 16px;
+      border-top: 1px solid rgba(208,223,235,.45);
+    }
+    .btn-cancel {
+      padding: 10px 20px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4);
+      color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-save {
+      padding: 10px 22px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: opacity .18s, transform .15s;
+      box-shadow: 0 4px 14px rgba(68,107,149,.28);
+    }
+    .btn-save:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-save:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-save svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 26px; right: 26px; z-index: 400;
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 20px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; color: #fff;
+      box-shadow: 0 10px 32px rgba(0,0,0,.2);
+      transform: translateY(90px); opacity: 0;
+      transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Logout modal ────────────────────────────────────────────────────────── */
+    .logout-overlay {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: rgba(10,28,52,.5); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center;
+    }
+    .logout-overlay.active { display: flex; }
+    .logout-modal {
+      background: #f7fbff; border-radius: 22px; padding: 34px 30px;
+      width: 100%; max-width: 340px; text-align: center;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22);
+    }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions  { display: flex; justify-content: center; gap: 12px; }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+  </style>
+</head>
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ════════════════════ SIDEBAR ════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html" data-page="dashboard">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html" data-page="manage-exams">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html" data-page="rubrics">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html" data-page="answer-files">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html" data-page="auto-grading">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html" data-page="results-reviews">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html" data-page="analytics">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html" data-page="learning-gaps">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html" data-page="archive">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html" class="active" data-page="profile">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════ MAIN ════════════════════ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div class="topbar-left">
+        <h2>Profile</h2>
+        <div class="bc">Account &rsaquo; Profile</div>
+      </div>
+      <div class="topbar-right">
+        <a href="./profile.html" class="user-chip">
+          <div class="chip-av" id="topbarInitials"></div>
+          <span id="topbarName"></span>
+        </a>
+      </div>
+    </div>
+
+    <div class="profile-layout">
+
+      <!-- ── Left: Profile card ───────────────────────────────────────────────── -->
+      <div class="profile-card glass">
+
+        <div class="avatar-wrap">
+          <div class="avatar" id="avatarCircle"></div>
+        </div>
+
+        <p class="profile-name" id="cardName"></p>
+
+        <button class="btn-change-photo" id="btnChangePhoto">CHANGE PHOTO</button>
+        <input type="file" id="photoInput" accept=".png,.jpg,.jpeg" style="display:none">
+
+        <div class="role-badge">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Instructor
+        </div>
+
+        <div class="profile-divider"></div>
+
+        <div class="profile-info-list">
+          <div class="info-row">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span id="cardEmail"></span>
+          </div>
+          <div class="info-row">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span id="cardDept"></span>
+          </div>
+          <div class="info-row">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="cardSince"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Right column ─────────────────────────────────────────────────────── -->
+      <div class="right-col">
+
+        <!-- Personal information -->
+        <div class="section-card glass">
+          <div class="section-head">
+            <div class="section-icon blue">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="section-head-text">
+              <h3>Personal Information</h3>
+              <p>Update your display name and department details</p>
+            </div>
+          </div>
+
+          <div class="field-grid">
+
+            <!-- Title + First Name (inline) -->
+            <div class="field-group">
+              <label class="field-label" for="firstName">First Name</label>
+              <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <select class="field-input" id="professionalTitle"
+                        style="flex:0 0 95px; min-width:80px; padding:10px 12px; cursor:pointer;">
+                  <option value="none">None</option>
+                  <option value="dr">Dr.</option>
+                  <option value="prof">Prof.</option>
+                  <option value="mr">Mr.</option>
+                  <option value="ms">Ms.</option>
+                  <option value="mrs">Mrs.</option>
+                  <option value="miss">Miss.</option>
+                </select>
+                <input class="field-input" id="firstName" type="text" value=""
+                       placeholder="First name" style="flex:1 1 0; min-width:100px;" />
+              </div>
+              <span class="field-err" id="firstName-err">First name is required.</span>
+            </div>
+
+            <!-- Last name -->
+            <div class="field-group">
+              <label class="field-label" for="lastName">Last Name</label>
+              <input class="field-input" id="lastName" type="text" value="" placeholder="Last name" />
+              <span class="field-err" id="lastName-err">Last name is required.</span>
+            </div>
+
+            <!-- Department -->
+            <div class="field-group">
+              <label class="field-label" for="department">Department</label>
+              <select class="field-input" id="department">
+                <option value="">Select your department</option>
+                <option value="cs">Computer Science</option>
+                <option value="is">Information Systems</option>
+                <option value="it">Information Technology</option>
+              </select>
+            </div>
+
+            <!-- Email (read-only) -->
+            <div class="field-group field-full">
+              <label class="field-label" for="email">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Email Address
+              </label>
+              <input class="field-input" id="email" type="email" value="" readonly />
+              <span class="readonly-note">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Email address cannot be changed.
+              </span>
+            </div>
+
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-cancel" onclick="resetInfo()">Discard</button>
+            <button class="btn-save" id="saveInfoBtn" onclick="saveInfo()">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Save Changes
+            </button>
+          </div>
+        </div>
+
+
+        <!-- Preferences -->
+        <div class="section-card glass">
+          <div class="section-head">
+            <div class="section-icon amber">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </div>
+            <div class="section-head-text">
+              <h3>Preferences</h3>
+              <p>Manage workflow and dialog preferences</p>
+            </div>
+          </div>
+
+          <div id="prefList">
+            <div class="pref-row">
+              <div class="pref-row-text">
+                <div class="pref-label">Show approval confirmation dialog</div>
+                <div class="pref-desc">Prompt before approving or locking student grades</div>
+              </div>
+              <label class="toggle-switch" title="Toggle approval confirmation dialog">
+                <input type="checkbox" id="toggleApprovalDialog" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /right-col -->
+    </div><!-- /profile-layout -->
+
+  </main>
+</div>
+
+<!-- ════════════════════ LOGOUT MODAL ════════════════════ -->
+<div class="logout-overlay" id="logoutOverlay">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign Out?</h3>
+    <p>You will be returned to the login screen.</p>
+    <div class="logout-actions">
+      <button onclick="document.getElementById('logoutOverlay').classList.remove('active')"
+        style="padding:10px 20px;border-radius:var(--radius-sm);border:1px solid var(--glass-border);background:rgba(255,255,255,0.22);color:var(--text-strong);font-weight:600;cursor:pointer;">
+        Cancel
+      </button>
+      <button onclick="doLogout()"
+        style="padding:10px 20px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,#fb7185,#f43f5e);color:#fff;font-weight:700;cursor:pointer;">
+        Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg id="toastIcon" viewBox="0 0 24 24"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+  authGuard();
+
+  /* ── Pre-populate from localStorage (instant render before API resolves) ─── */
+  (function () {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    if (!p) return;
+
+    const fullName = p.fullName || '';
+    const parts    = fullName.trim().split(/\s+/);
+    const first    = parts[0] || '';
+    const last     = parts.slice(1).join(' ') || '';
+    const inits    = [first[0], last[0]].filter(Boolean).join('').toUpperCase() || (p.email || 'U')[0].toUpperCase();
+    const avUrl    = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+
+    // Topbar chip
+    const nm = document.getElementById('topbarName');
+    const av = document.getElementById('topbarInitials');
+    if (nm) nm.textContent = getDisplayName(p) || p.email || 'User';
+    if (av) {
+      if (avUrl) {
+        av.innerHTML = `<img src="${avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      } else {
+        av.textContent = inits;
+      }
+    }
+
+    // Profile card
+    const cardName = document.getElementById('cardName');
+    const cardEmail = document.getElementById('cardEmail');
+    if (cardName && fullName) cardName.textContent = getDisplayName(p) || fullName;
+    if (cardEmail && p.email) cardEmail.textContent = p.email;
+
+    // Form fields
+    const fnEl = document.getElementById('firstName');
+    const lnEl = document.getElementById('lastName');
+    const emEl = document.getElementById('email');
+    const dpEl = document.getElementById('department');
+    const ttEl = document.getElementById('professionalTitle');
+    if (fnEl && first) fnEl.value = first;
+    if (lnEl && last)  lnEl.value = last;
+    if (emEl && p.email) emEl.value = p.email;
+    if (dpEl && p.department) dpEl.value = p.department;
+    if (ttEl && p.professionalTitle) ttEl.value = p.professionalTitle;
+  })();
+
+  /* ── Logout ──────────────────────────────────────────────────────────────── */
+  document.getElementById('logoutTrigger').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('logoutOverlay').classList.add('active');
+  });
+
+  /* ── Toast ───────────────────────────────────────────────────────────────── */
+  let toastTimer;
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    document.getElementById('toastIcon').innerHTML = type === 'success'
+      ? '<polyline points="20 6 9 17 4 12"/>'
+      : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    t.className = `toast ${type} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  const DEPT_LABEL = { cs: 'Computer Science', is: 'Information Systems', it: 'Information Technology' };
+
+  /* ── Field helpers ───────────────────────────────────────────────────────── */
+  function setErr(id, show) {
+    const el = document.getElementById(id + '-err');
+    const input = document.getElementById(id);
+    if (!el || !input) return;
+    el.classList.toggle('show', show);
+    input.classList.toggle('invalid', show);
+  }
+
+  /* ── Avatar URL state ────────────────────────────────────────────────────── */
+  // Avatar is served by the backend; currentAvatarUrl is the full URL
+  // (API_BASE + '/' + avatarPath) or null when no avatar is set.
+  let currentAvatarUrl = null;
+
+  function applyAvatarEl(el, url, initials) {
+    if (url) {
+      el.innerHTML = `<img src="${url}" alt="avatar">`;
+    } else {
+      el.textContent = initials;
+    }
+  }
+
+  /* ── Update profile card preview ─────────────────────────────────────────── */
+  function refreshCard() {
+    const title = document.getElementById('professionalTitle').value;
+    const first = document.getElementById('firstName').value.trim();
+    const last  = document.getElementById('lastName').value.trim();
+    const dept  = document.getElementById('department').value;
+
+    const _TITLES = { dr:'Dr.', prof:'Prof.', mr:'Mr.', ms:'Ms.', mrs:'Mrs.', miss:'Miss.', eng:'Eng.', none:'' };
+    const _prefix = (title && title !== 'none' && _TITLES[title]) ? _TITLES[title] + ' ' : '';
+    const full = [first, last].filter(Boolean).join(' ');
+    const displayFull = _prefix + (full || '');
+    const initials = [first[0], last[0]].filter(Boolean).join('').toUpperCase() || 'U';
+
+    document.getElementById('cardName').textContent = displayFull || 'Your Name';
+    document.getElementById('topbarName').textContent = displayFull || 'User';
+    if (dept) document.getElementById('cardDept').textContent = `Department of ${DEPT_LABEL[dept] || dept}`;
+
+    if (!currentAvatarUrl) {
+      document.getElementById('avatarCircle').textContent = initials;
+      document.getElementById('topbarInitials').textContent = initials;
+    }
+  }
+
+  ['firstName','lastName'].forEach(id => {
+    document.getElementById(id).addEventListener('input', refreshCard);
+  });
+  document.getElementById('professionalTitle').addEventListener('change', refreshCard);
+  document.getElementById('department').addEventListener('change', refreshCard);
+
+  /* ── Save personal info ──────────────────────────────────────────────────── */
+  const ORIGINAL = { firstName: '', lastName: '', department: '', professionalTitle: 'none' };
+
+  async function saveInfo() {
+    const first = document.getElementById('firstName').value.trim();
+    const last  = document.getElementById('lastName').value.trim();
+    let valid = true;
+
+    if (!first) { setErr('firstName', true); valid = false; } else setErr('firstName', false);
+    if (!last)  { setErr('lastName',  true); valid = false; } else setErr('lastName', false);
+    if (!valid) return;
+
+    const btn = document.getElementById('saveInfoBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="animation:spin .7s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Saving…`;
+
+    try {
+      const dept  = document.getElementById('department').value || null;
+      const title = document.getElementById('professionalTitle').value || 'none';
+      const data = await apiFetch('/users/me', {
+        method: 'PUT',
+        body: JSON.stringify({ fullName: `${first} ${last}`.trim(), department: dept, professionalTitle: title }),
+      });
+
+      ORIGINAL.firstName         = first;
+      ORIGINAL.lastName          = last;
+      ORIGINAL.department        = data.department || '';
+      ORIGINAL.professionalTitle = data.professionalTitle || 'none';
+
+      // Keep localStorage in sync so topbar on other pages stays current
+      const stored = JSON.parse(localStorage.getItem('taqdeer_profile') || '{}');
+      stored.fullName          = data.fullName;
+      stored.professionalTitle = data.professionalTitle || 'none';
+      localStorage.setItem('taqdeer_profile', JSON.stringify(stored));
+
+      const _TITLES_SAVE = { dr:'Dr.', prof:'Prof.', mr:'Mr.', ms:'Ms.', mrs:'Mrs.', miss:'Miss.', eng:'Eng.', none:'' };
+      const _pfx = (title && title !== 'none' && _TITLES_SAVE[title]) ? _TITLES_SAVE[title] + ' ' : '';
+      document.getElementById('cardName').textContent  = _pfx + data.fullName;
+      document.getElementById('cardEmail').textContent = data.email;
+      if (data.department) {
+        document.getElementById('cardDept').textContent = `Department of ${DEPT_LABEL[data.department] || data.department}`;
+      }
+
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Save Changes`;
+      showToast('Profile updated successfully!', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to save. Please try again.', 'error');
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Save Changes`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function resetInfo() {
+    document.getElementById('firstName').value         = ORIGINAL.firstName;
+    document.getElementById('lastName').value          = ORIGINAL.lastName;
+    document.getElementById('department').value        = ORIGINAL.department;
+    document.getElementById('professionalTitle').value = ORIGINAL.professionalTitle || 'none';
+    ['firstName','lastName'].forEach(id => setErr(id, false));
+    refreshCard();
+  }
+
+  /* ── Load profile from backend ───────────────────────────────────────────── */
+  (async function loadProfile() {
+    try {
+      const data = await apiFetch('/users/me');
+      const parts = (data.fullName || '').trim().split(/\s+/);
+      const first = parts[0] || '';
+      const last  = parts.slice(1).join(' ') || '';
+
+      const titleVal = data.professionalTitle || 'none';
+      document.getElementById('firstName').value         = first;
+      document.getElementById('lastName').value          = last;
+      document.getElementById('department').value        = data.department || '';
+      document.getElementById('professionalTitle').value = titleVal;
+      document.getElementById('email').value             = data.email;
+
+      const _TITLES_LOAD = { dr:'Dr.', prof:'Prof.', mr:'Mr.', ms:'Ms.', mrs:'Mrs.', miss:'Miss.', eng:'Eng.', none:'' };
+      const _pfxLoad = (titleVal && titleVal !== 'none' && _TITLES_LOAD[titleVal]) ? _TITLES_LOAD[titleVal] + ' ' : '';
+      document.getElementById('cardName').textContent  = _pfxLoad + data.fullName;
+      document.getElementById('cardEmail').textContent = data.email;
+      if (data.department) {
+        document.getElementById('cardDept').textContent = `Department of ${DEPT_LABEL[data.department] || data.department}`;
+      }
+
+      const since = new Date(data.createdAt);
+      document.getElementById('cardSince').textContent =
+        `Member since ${since.toLocaleString('en-US', { month: 'long', year: 'numeric' })}`;
+
+      const initials = [first[0], last[0]].filter(Boolean).join('').toUpperCase() || 'U';
+      document.getElementById('topbarName').textContent = _pfxLoad + data.fullName;
+
+      // Set avatar from backend-served URL (avatarPath is relative, e.g. "uploads/avatars/3_abc.jpg")
+      currentAvatarUrl = data.avatarPath ? API_BASE + '/' + data.avatarPath : null;
+      applyAvatarEl(document.getElementById('avatarCircle'),   currentAvatarUrl, initials);
+      applyAvatarEl(document.getElementById('topbarInitials'), currentAvatarUrl, initials);
+
+      ORIGINAL.firstName         = first;
+      ORIGINAL.lastName          = last;
+      ORIGINAL.department        = data.department || '';
+      ORIGINAL.professionalTitle = titleVal;
+
+      // Keep localStorage in sync (initial load may have stale/missing professionalTitle)
+      const _stored = JSON.parse(localStorage.getItem('taqdeer_profile') || '{}');
+      _stored.professionalTitle = titleVal;
+      localStorage.setItem('taqdeer_profile', JSON.stringify(_stored));
+    } catch {
+      showToast('Failed to load profile. Please refresh.', 'error');
+    }
+  })();
+
+  /* ── Change Photo ─────────────────────────────────────────────────────────── */
+  document.getElementById('btnChangePhoto').addEventListener('click', () => {
+    document.getElementById('photoInput').click();
+  });
+
+  document.getElementById('photoInput').addEventListener('change', async function () {
+    const file = this.files[0];
+    if (!file) return;
+    this.value = '';
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Invalid file type. Please upload PNG, JPG, or JPEG.', 'error');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('File is too large. Maximum allowed size is 2 MB.', 'error');
+      return;
+    }
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const data = await apiFetch('/users/me/avatar', { method: 'POST', body: form });
+
+      // Update displayed avatar from backend URL
+      currentAvatarUrl = data.avatarPath ? API_BASE + '/' + data.avatarPath : null;
+      applyAvatarEl(document.getElementById('avatarCircle'),   currentAvatarUrl, '');
+      applyAvatarEl(document.getElementById('topbarInitials'), currentAvatarUrl, '');
+
+      // Keep taqdeer_profile in sync so other pages see the new avatarPath immediately
+      const stored = JSON.parse(localStorage.getItem('taqdeer_profile') || '{}');
+      stored.avatarPath = data.avatarPath;
+      localStorage.setItem('taqdeer_profile', JSON.stringify(stored));
+
+      showToast('Profile photo updated.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Upload failed. Please try again.', 'error');
+    }
+  });
+
+  /* ── Spin keyframe ───────────────────────────────────────────────────────── */
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+
+  /* ── Preferences ─────────────────────────────────────────────────────────── */
+  function _prefKey() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    const uid = p ? (p.id || p.email || 'default') : 'default';
+    return 'skipApprovalConfirmDialog_' + uid;
+  }
+
+  (function initPrefs() {
+    const skip = localStorage.getItem(_prefKey()) === 'true';
+    const chk  = document.getElementById('toggleApprovalDialog');
+    if (chk) chk.checked = !skip; // ON = show dialog (default), OFF = skip dialog
+  })();
+
+  document.getElementById('toggleApprovalDialog').addEventListener('change', function () {
+    if (this.checked) {
+      localStorage.removeItem(_prefKey());
+      showToast('Approval confirmation dialog enabled.', 'success');
+    } else {
+      localStorage.setItem(_prefKey(), 'true');
+      showToast('Approval confirmation dialog disabled.', 'info');
+    }
+  });
+</script>
+</body>
+</html>

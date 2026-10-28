@@ -1,0 +1,2331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Results Review</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js"></script>
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid !important; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────────── */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; margin-bottom: 24px; border-radius: var(--radius-lg); }
+    .sidebar-toggle { display: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.22); place-items: center; cursor: pointer; }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .user-chip { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 999px; background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border); font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer; transition: background var(--t); text-decoration: none; }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800; }
+
+    /* ── Workflow Progress ───────────────────────────────────────────────────── */
+    .workflow-progress-wrap { margin-bottom: 24px; padding: 24px 28px 20px; border-radius: var(--radius-lg); display: flex; flex-direction: row; align-items: center; gap: 16px; }
+    .wp-steps-outer { flex: 1; order: 2; position: relative; min-width: 0; }
+    .wp-nav-row { display: contents; }
+    .wp-next-wrap { order: 3; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+    .wp-steps-outer::before { content: ''; position: absolute; top: 26px; left: calc(100% / 10); right: calc(100% / 10); height: 2px; background: rgba(208,223,235,.5); border-radius: 2px; z-index: 0; }
+    .wp-fill { position: absolute; top: 26px; left: calc(100% / 10); height: 2px; max-width: calc(100% - 2 * (100% / 10)); background: linear-gradient(90deg, var(--c-ice), var(--c-arctic)); border-radius: 2px; z-index: 1; transition: width .55s cubic-bezier(.4,0,.2,1); }
+    .wp-steps-row { display: flex; position: relative; z-index: 2; }
+    .wp-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
+    .wp-step.upcoming { opacity: .38; cursor: not-allowed; }
+    .wp-step.completed { cursor: pointer; }
+    .wp-step.completed:hover .wp-bubble { transform: scale(1.1); }
+    .wp-step.active { cursor: default; }
+    .wp-bubble { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 800; border: 2.5px solid; transition: all .32s cubic-bezier(.34,1.56,.64,1); position: relative; z-index: 3; }
+    .wp-step.completed .wp-bubble { background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); border-color: var(--c-arctic); color: #fff; }
+    .wp-step.active    .wp-bubble { background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); border-color: var(--c-midnight); color: #fff; box-shadow: 0 0 0 7px rgba(68,107,149,.15), 0 8px 24px rgba(40,64,91,.32); }
+    .wp-step.upcoming  .wp-bubble { background: #fff; border-color: rgba(208,223,235,.95); color: var(--text-muted); }
+    .wp-bubble svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wp-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; text-align: center; line-height: 1.2; }
+    .wp-step.completed .wp-lbl { color: var(--c-arctic); }
+    .wp-step.active    .wp-lbl { color: var(--c-midnight); font-weight: 800; letter-spacing: .06em; }
+    .wp-step.upcoming  .wp-lbl { color: var(--text-muted); }
+    .wp-sep { width: 1px; height: 44px; background: rgba(208,223,235,.6); margin: 0 22px; flex-shrink: 0; align-self: center; }
+    .wp-next-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 11px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .18s, transform .1s; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 18px rgba(68,107,149,.35); align-self: center; }
+    .wp-next-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .wp-next-btn:disabled { background: rgba(208,223,235,.52); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+    .wp-next-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wp-prev-btn { order: 1; display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 11px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.45); color: var(--text-strong); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, transform .1s; white-space: nowrap; flex-shrink: 0; align-self: center; }
+    .wp-prev-btn:hover { background: rgba(255,255,255,.85); transform: translateY(-1px); }
+    .wp-prev-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 980px) { .wp-bubble { width: 44px; height: 44px; font-size: 15px; } .wp-steps-outer::before { top: 22px; } .wp-fill { top: 22px; } .wp-lbl { font-size: 10px; } }
+    @media (max-width: 760px) { .wp-lbl { display: none; } .wp-bubble { width: 36px; height: 36px; font-size: 13px; } .wp-bubble svg { width: 14px; height: 14px; } .wp-steps-outer::before { top: 18px; } .wp-fill { top: 18px; } .wp-btn-label { display: none; } .wp-prev-btn-label { display: none; } .workflow-progress-wrap { padding: 18px 16px; } }
+    @media (max-width: 500px) { .wp-sep { margin: 0 10px; } .wp-next-btn { padding: 10px 12px; } }
+
+    /* ── Logout modal ────────────────────────────────────────────────────────── */
+    .logout-overlay { position: fixed; inset: 0; background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all .25s; z-index: 300; }
+    .logout-overlay.active { opacity: 1; visibility: visible; }
+    .logout-modal { background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px; text-align: center; width: 400px; max-width: 92%; box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s; }
+    .logout-overlay.active .logout-modal { transform: scale(1); }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-logout-cancel { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-logout-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-logout-confirm { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    .toast { position: fixed; bottom: 26px; right: 26px; z-index: 400; display: flex; align-items: center; gap: 10px; padding: 13px 20px; border-radius: 14px; font-size: 13px; font-weight: 600; color: #fff; box-shadow: 0 10px 32px rgba(0,0,0,.2); transform: translateY(90px); opacity: 0; transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast.info    { background: linear-gradient(135deg,var(--c-ice),var(--c-arctic)); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ════════════════════════════════════════════════════════════
+       PAGE-SPECIFIC STYLES
+    ════════════════════════════════════════════════════════════ */
+
+    /* Page header */
+    .ag-page-header { margin-bottom: 22px; }
+    .ag-page-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 800; color: var(--text-strong); }
+    .ag-page-header p  { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* Card shell */
+    .ag-card { border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; }
+    .ag-card-head { padding: 18px 22px 16px; border-bottom: 1px solid rgba(208,223,235,.45); display: flex; align-items: center; gap: 12px; }
+    .ag-card-icon { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); display: grid; place-items: center; }
+    .ag-card-icon svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .ag-card-title { font-size: 15px; font-weight: 700; color: var(--text-strong); flex: 1; }
+    .ag-card-body { padding: 22px; }
+
+    /* Exam select */
+    .ag-field-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .ag-select-wrap { position: relative; }
+    .ag-select-wrap select { width: 100%; appearance: none; -webkit-appearance: none; padding: 11px 40px 11px 14px; border-radius: 11px; border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.65); color: var(--text-strong); font-size: 13px; outline: none; cursor: pointer; transition: border-color .18s, box-shadow .18s; }
+    .ag-select-wrap select:focus { border-color: var(--c-ice); background: #fff; box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+    .ag-sel-chevron { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; width: 16px; height: 16px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Controls row ─────────────────────────────────────────────────────────── */
+    .rr-controls { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+    .rr-controls .ag-select-wrap { flex: 1; min-width: 220px; }
+    .rr-actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+    .btn-approve-all {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 18px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #34d399, #059669);
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .1s;
+      box-shadow: 0 4px 14px rgba(16,185,129,.3);
+    }
+    .btn-approve-all:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-approve-all svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Export menu ────────────────────────────────────────────────────────── */
+    .export-menu-wrap { position: relative; display: inline-flex; }
+    .btn-export-menu {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.85);
+      background: rgba(255,255,255,.55);
+      color: var(--text-muted); cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .btn-export-menu:hover { background: rgba(255,255,255,.85); border-color: rgba(104,149,188,.4); color: var(--text-strong); }
+    .export-dropdown {
+      position: fixed; z-index: 9000;
+      background: rgba(255,255,255,.97); border: 1px solid rgba(208,223,235,.7);
+      border-radius: 12px; box-shadow: 0 8px 28px rgba(0,20,40,.13);
+      padding: 6px; min-width: 196px;
+      opacity: 0; visibility: hidden; transform: translateY(-4px);
+      transition: opacity .15s, visibility .15s, transform .15s;
+      pointer-events: none;
+    }
+    .export-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+    .export-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 600; color: var(--text-strong);
+      cursor: pointer; transition: background .12s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .export-item:hover { background: rgba(104,149,188,.1); color: var(--c-arctic); }
+    .export-item svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .export-sep { height: 1px; background: rgba(208,223,235,.5); margin: 4px 0; }
+
+    /* ── Summary stats ──────────────────────────────────────────────────────── */
+    .rr-summary { display: flex; gap: 0; margin-bottom: 0; padding-top: 18px; border-top: 1px solid rgba(208,223,235,.4); }
+    .rr-stat { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 0 18px; }
+    .rr-stat:first-child { padding-left: 0; }
+    .rr-stat:last-child  { padding-right: 0; }
+    .rr-stat-sep { width: 1px; height: 36px; background: rgba(208,223,235,.6); align-self: center; flex-shrink: 0; }
+    .rr-stat-val { font-size: 22px; font-weight: 900; color: var(--text-strong); line-height: 1; }
+    .rr-stat-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+
+    /* ── Table ──────────────────────────────────────────────────────────────── */
+    .rr-table-wrap { overflow-x: auto; }
+    .rr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rr-table thead tr { border-bottom: 2px solid rgba(208,223,235,.5); }
+    .rr-table th {
+      padding: 10px 14px; text-align: left;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .rr-table td { padding: 13px 14px; vertical-align: middle; border-bottom: 1px solid rgba(208,223,235,.3); }
+    .rr-table tbody tr:last-child td { border-bottom: none; }
+    .rr-table tbody tr:hover td { background: rgba(255,255,255,.35); }
+
+    /* Student cell */
+    .student-cell { display: flex; align-items: center; gap: 10px; }
+    .student-av { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+    .student-id { font-weight: 700; color: var(--text-strong); }
+    .student-name { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+    /* Grade cell */
+    .grade-val { font-size: 16px; font-weight: 900; color: var(--text-strong); }
+    .grade-val.high { color: #059669; }
+    .grade-val.mid  { color: #d97706; }
+    .grade-val.low  { color: #dc2626; }
+
+    /* Status badges */
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .status-badge.pending  { background: rgba(245,158,11,.1);  color: #78350f; border: 1px solid rgba(245,158,11,.25); }
+    .status-badge.pending::before  { background: #f59e0b; }
+    .status-badge.approved { background: rgba(16,185,129,.1);  color: #065f46; border: 1px solid rgba(16,185,129,.25); }
+    .status-badge.approved::before { background: #10b981; }
+
+    /* Action buttons */
+    .rr-table td:last-child { width: 1%; white-space: nowrap; text-align: right; }
+    .rr-table th:last-child { text-align: right; }
+    .action-btns { display: flex; gap: 7px; justify-content: flex-end; }
+    .btn-edit {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 8px;
+      border: 1.5px solid rgba(208,223,235,.85);
+      background: rgba(255,255,255,.55);
+      color: var(--text-strong); font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-edit:hover { background: rgba(255,255,255,.9); }
+    .btn-edit svg { width: 12px; height: 12px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .btn-approve-row {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 8px; border: none;
+      background: linear-gradient(135deg, #34d399, #059669);
+      color: #fff; font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-approve-row:hover { opacity: .85; }
+    .btn-approve-row svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Review Paper button */
+    .btn-review {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 8px;
+      border: 1.5px solid rgba(68,107,149,.5);
+      background: rgba(68,107,149,.08);
+      color: var(--c-arctic); font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-review:hover { background: rgba(68,107,149,.16); border-color: var(--c-arctic); }
+    .btn-review svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Locked row (approved) */
+    .btn-edit.locked {
+      opacity: .4; cursor: not-allowed; pointer-events: none;
+    }
+    .lock-icon { display: inline-flex; align-items: center; margin-left: 6px; vertical-align: middle; }
+    .lock-icon svg { width: 11px; height: 11px; stroke: #059669; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .btn-unlock {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 8px;
+      border: 1.5px solid rgba(245,158,11,.5);
+      background: rgba(245,158,11,.08);
+      color: #b45309; font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-unlock:hover { background: rgba(245,158,11,.16); border-color: #f59e0b; }
+    .btn-unlock svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Per-row reviewed export button */
+    .btn-export-row {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 8px;
+      border: 1.5px solid rgba(104,149,188,.35);
+      background: rgba(104,149,188,.07);
+      color: var(--c-arctic); font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .15s, border-color .15s; position: relative;
+    }
+    .btn-export-row:hover { background: rgba(104,149,188,.15); border-color: var(--c-arctic); }
+    .btn-export-row svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Per-row export dropdown */
+    .row-export-menu {
+      position: fixed; z-index: 9100;
+      background: rgba(255,255,255,.97); border: 1px solid rgba(208,223,235,.7);
+      border-radius: 11px; box-shadow: 0 8px 28px rgba(0,20,40,.13);
+      padding: 5px; min-width: 178px;
+      opacity: 0; visibility: hidden; transform: translateY(-4px);
+      transition: opacity .14s, visibility .14s, transform .14s;
+    }
+    .row-export-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
+    .row-export-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 12px; border-radius: 7px;
+      font-size: 12px; font-weight: 600; color: var(--text-strong);
+      cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+      transition: background .11s;
+    }
+    .row-export-item:hover { background: rgba(104,149,188,.1); color: var(--c-arctic); }
+    .row-export-item svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* ── Approval confirmation modal ────────────────────────────────────────── */
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all .25s; z-index: 250; }
+    .confirm-overlay.active { opacity: 1; visibility: visible; }
+    .confirm-modal { background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px; text-align: center; width: 440px; max-width: 92%; box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s; }
+    .confirm-overlay.active .confirm-modal { transform: scale(1); }
+    .confirm-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(16,185,129,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .confirm-ring svg { width: 24px; height: 24px; stroke: #059669; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .confirm-modal h3 { margin: 0 0 10px; font-size: 17px; color: var(--text-strong); }
+    .confirm-modal p  { margin: 0 0 14px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .confirm-skip-row { display: flex; align-items: center; justify-content: center; gap: 7px; margin-bottom: 20px; }
+    .confirm-skip-row input[type="checkbox"] { width: 14px; height: 14px; accent-color: #059669; cursor: pointer; flex-shrink: 0; margin: 0; }
+    .confirm-skip-row label { font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none; }
+    .confirm-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-confirm-cancel  { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-confirm-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-confirm-ok { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #34d399, #059669); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-confirm-ok:hover { opacity: .88; }
+
+    /* Empty state */
+    .rr-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .rr-empty svg { width: 44px; height: 44px; stroke: rgba(208,223,235,.8); fill: none; stroke-width: 1.5; margin-bottom: 14px; }
+    .rr-empty p { margin: 0; font-size: 13px; }
+
+    /* ── Edit Grade Modal ────────────────────────────────────────────────────── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all .25s; z-index: 200; }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-box { background: rgba(255,255,255,.97); padding: 30px; border-radius: 20px; width: 440px; max-width: 94vw; box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s; }
+    .modal-overlay.active .modal-box { transform: scale(1); }
+
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+    .modal-title { font-size: 17px; font-weight: 800; color: var(--text-strong); margin: 0; }
+    .modal-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); cursor: pointer; display: grid; place-items: center; }
+    .modal-close:hover { background: rgba(255,255,255,.85); }
+    .modal-close svg { width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .modal-field { margin-bottom: 18px; }
+    .modal-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+    .modal-field input[type="number"] { width: 100%; padding: 10px 13px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.65); color: var(--text-strong); font-size: 15px; font-weight: 700; outline: none; transition: border-color .18s, box-shadow .18s; }
+    .modal-field input[type="number"]:focus { border-color: var(--c-ice); background: #fff; box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+    .modal-field textarea { width: 100%; padding: 10px 13px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.65); color: var(--text-strong); font-size: 13px; outline: none; resize: vertical; min-height: 90px; font-family: inherit; transition: border-color .18s, box-shadow .18s; }
+    .modal-field textarea:focus { border-color: var(--c-ice); background: #fff; box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+    .btn-modal-cancel { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-modal-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-modal-save { padding: 10px 24px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-modal-save:hover { opacity: .88; }
+
+    /* ── Manually-edited grade indicator ─────────────────────────────────────── */
+    .grade-edited-indicator {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      margin-left: 5px;
+      cursor: default;
+      vertical-align: middle;
+    }
+    .grade-edited-icon {
+      width: 17px;
+      height: 17px;
+      border-radius: 5px;
+      background: rgba(104,149,188,.12);
+      border: 1px solid rgba(104,149,188,.3);
+      display: grid;
+      place-items: center;
+      transition: background .15s, border-color .15s;
+    }
+    .grade-edited-indicator:hover .grade-edited-icon {
+      background: rgba(104,149,188,.22);
+      border-color: rgba(104,149,188,.5);
+    }
+    .grade-edited-icon svg {
+      width: 9px;
+      height: 9px;
+      stroke: var(--c-arctic);
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .grade-edited-tooltip {
+      position: fixed;
+      background: rgba(255,255,255,.97);
+      border: 1px solid rgba(208,223,235,.75);
+      border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(0,20,40,.13);
+      padding: 11px 14px;
+      min-width: 196px;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .18s, visibility .18s;
+      z-index: 9500;
+      white-space: nowrap;
+    }
+    .grade-edited-tooltip.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    .grade-edited-tooltip::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+    }
+    /* Arrow points down (tooltip above element) */
+    .grade-edited-tooltip:not(.tooltip-below)::after {
+      top: 100%;
+      border-top-color: rgba(255,255,255,.97);
+      filter: drop-shadow(0 1px 0 rgba(208,223,235,.75));
+    }
+    /* Arrow points up (tooltip below element) */
+    .grade-edited-tooltip.tooltip-below::after {
+      bottom: 100%;
+      border-bottom-color: rgba(255,255,255,.97);
+      filter: drop-shadow(0 -1px 0 rgba(208,223,235,.75));
+    }
+    .get-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--c-arctic);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .get-title svg {
+      width: 10px;
+      height: 10px;
+      stroke: var(--c-arctic);
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .get-row {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+    .get-row strong {
+      color: var(--text-strong);
+      font-weight: 700;
+    }
+
+    /* ── Exam Paper Drawer ──────────────────────────────────────────────────── */
+    .ep-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: stretch;
+      opacity: 0; visibility: hidden;
+      transition: opacity .25s, visibility .25s;
+    }
+    .ep-overlay.active { opacity: 1; visibility: visible; }
+    .ep-backdrop { position: absolute; inset: 0; background: rgba(10,28,52,0.4); backdrop-filter: blur(4px); cursor: pointer; }
+    .ep-panel {
+      position: relative; margin-left: auto;
+      width: 640px; max-width: 96vw; height: 100%;
+      background: #f8fcff; display: flex; flex-direction: column;
+      box-shadow: -20px 0 60px rgba(0,20,40,0.18);
+      transform: translateX(100%);
+      transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), width 0.26s cubic-bezier(0.4,0,0.2,1);
+    }
+    .ep-overlay.active .ep-panel { transform: translateX(0); }
+    .ep-panel.expanded { width: min(960px, 96vw); }
+
+    .ep-header { padding: 20px 24px 16px; border-bottom: 1px solid rgba(208,223,235,0.5); flex-shrink: 0; }
+    .ep-student-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .ep-avatar { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+    .ep-student-info { flex: 1; min-width: 0; }
+    .ep-student-name { font-size: 16px; font-weight: 700; color: var(--text-strong); }
+    .ep-student-id { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .ep-actions-row { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+    .ep-close, .ep-expand { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(208,223,235,0.7); background: rgba(255,255,255,0.4); cursor: pointer; display: grid; place-items: center; }
+    .ep-close svg, .ep-expand svg { width: 16px; height: 16px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .ep-total-strip {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 24px 14px;
+      border-bottom: 1px solid rgba(208,223,235,0.4);
+      flex-shrink: 0;
+    }
+    .ep-exam-label { flex: 1; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .ep-exam-label strong { display: block; font-size: 13px; color: var(--text-strong); font-weight: 700; }
+    .ep-total-val { font-size: 20px; font-weight: 800; color: var(--text-strong); white-space: nowrap; }
+    .ep-save-btn {
+      display: none; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px; border: none;
+      background: linear-gradient(135deg,var(--c-arctic),var(--c-midnight));
+      color: #fff; font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .ep-save-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .ep-body { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+    .ep-question { border-radius: 14px; background: rgba(255,255,255,0.6); border: 1px solid rgba(208,223,235,0.6); overflow: visible; }
+    .ep-q-header { padding: 12px 16px 10px; background: rgba(208,223,235,0.15); border-bottom: 1px solid rgba(208,223,235,0.4); display: flex; align-items: flex-start; gap: 10px; border-radius: 14px 14px 0 0; }
+    .ep-q-num { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-arctic); background: rgba(104,149,188,0.12); padding: 2px 8px; border-radius: 999px; flex-shrink: 0; margin-top: 1px; }
+    .ep-q-text { font-size: 13px; font-weight: 600; color: var(--text-strong); line-height: 1.5; }
+    .ep-q-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    .ep-answer-block { background: rgba(248,252,255,0.8); border: 1px solid rgba(208,223,235,0.4); border-radius: 10px; padding: 10px 14px; }
+    .ep-block-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+    .ep-block-label svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .ep-answer-text { font-size: 13px; color: var(--text); line-height: 1.55; }
+
+    .ep-reasoning-block { background: rgba(249,250,251,0.9); border: 1px solid rgba(208,223,235,0.35); border-radius: 10px; padding: 10px 14px; }
+    .ep-reasoning-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; font-style: italic; }
+    .ep-reasoning-text.collapsed { max-height: 4.8em; overflow: hidden; }
+    .ep-toggle-btn {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 5px;
+      background: none; border: none; cursor: pointer; padding: 0;
+      font-size: 11px; font-weight: 700; color: var(--c-arctic);
+      font-family: inherit; letter-spacing: 0.02em;
+    }
+    .ep-toggle-btn:hover { text-decoration: underline; }
+
+    .ep-score-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+    .ep-score-label { font-size: 12px; color: var(--text-muted); }
+    .ep-score-input {
+      width: 52px; text-align: center; padding: 5px 6px;
+      border-radius: 8px; border: 1.5px solid rgba(152,185,212,0.6);
+      background: rgba(255,255,255,0.8); font-size: 14px; font-weight: 700;
+      color: var(--text-strong); outline: none; font-family: inherit;
+    }
+    .ep-score-input:focus { border-color: var(--c-arctic); }
+    .ep-score-max { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+    /* Per-question edited indicator (reuses grade-edited-indicator pattern) */
+    .ep-q-edited {
+      position: relative; display: inline-flex; align-items: center; cursor: default;
+    }
+    .ep-q-edited-icon { display: inline-flex; align-items: center; color: var(--c-arctic); margin-right: 2px; }
+    .ep-q-edited-icon svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .ep-q-edited-tooltip {
+      display: none; position: absolute; bottom: calc(100% + 6px); right: 0;
+      min-width: 180px; background: rgba(255,255,255,0.97);
+      border: 1px solid rgba(208,223,235,0.8); border-radius: 10px;
+      padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,20,40,0.12);
+      z-index: 600; white-space: nowrap;
+    }
+    .ep-q-edited:hover .ep-q-edited-tooltip { display: block; }
+    .ep-q-edited-tooltip .get-title { font-size: 11px; font-weight: 700; color: var(--text-strong); display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+    .ep-q-edited-tooltip .get-title svg { width: 11px; height: 11px; stroke: var(--c-arctic); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .ep-q-edited-tooltip .get-row { font-size: 11.5px; color: var(--text-muted); line-height: 1.75; }
+    .ep-q-edited-tooltip .get-row strong { color: var(--text-strong); font-weight: 700; }
+  </style>
+</head>
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html" class="active">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════════════════════════ -->
+  <main>
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 style="margin:0;font-size:20px;">Results Review</h2>
+          <div class="bc" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Dashboard &rsaquo; Results Review</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a href="./profile.html" class="user-chip">
+          <div class="chip-av" id="chipAvatar">?</div>
+          <span id="chipName">Instructor</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Workflow Progress Indicator (step 5 active) -->
+    <div class="workflow-progress-wrap glass">
+      <div class="wp-steps-outer">
+        <div class="wp-fill" id="wpFill"></div>
+        <div class="wp-steps-row">
+          <div class="wp-step upcoming" id="wps-1"><div class="wp-bubble">1</div><div class="wp-lbl">Exam Info</div></div>
+          <div class="wp-step upcoming" id="wps-2"><div class="wp-bubble">2</div><div class="wp-lbl">Rubric &amp; Answer Key</div></div>
+          <div class="wp-step upcoming" id="wps-3"><div class="wp-bubble">3</div><div class="wp-lbl">Upload Answers</div></div>
+          <div class="wp-step upcoming" id="wps-4"><div class="wp-bubble">4</div><div class="wp-lbl">AI Grading</div></div>
+          <div class="wp-step upcoming" id="wps-5"><div class="wp-bubble">5</div><div class="wp-lbl">Review Grades</div></div>
+        </div>
+      </div>
+      <div class="wp-nav-row">
+        <button class="wp-prev-btn" onclick="window.location.href='./auto-grading.html'">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <span class="wp-prev-btn-label">AI Grading</span>
+        </button>
+        <div class="wp-next-wrap" style="display:flex;flex-direction:column;align-items:center;">
+          <button class="wp-next-btn" id="progressNextBtn" disabled>
+            <span class="wp-btn-label">Finish</span>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <span id="nextHint" style="font-size:11px;color:var(--text-muted);margin-top:5px;text-align:center;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="ag-page-header">
+      <h1>Results Review</h1>
+      <p>Review and approve student grades before finalising the exam</p>
+    </div>
+
+    <!-- ── Card: Select Exam + Controls ─────────────────────────────────────── -->
+    <div class="ag-card glass">
+      <div class="ag-card-head">
+        <div class="ag-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <span class="ag-card-title">Select Exam</span>
+      </div>
+      <div class="ag-card-body">
+        <div class="rr-controls">
+          <div style="flex:1;min-width:220px;">
+            <label class="ag-field-label" for="examSelect">Exam</label>
+            <div class="ag-select-wrap">
+              <select id="examSelect">
+                <option value="">— Select an exam —</option>
+              </select>
+              <svg class="ag-sel-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div class="rr-actions">
+            <button class="btn-approve-all" id="approveAllBtn">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Approve All
+            </button>
+            <div class="export-menu-wrap">
+              <button class="btn-export-menu" id="exportMenuBtn" title="Export options">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="rr-summary" id="rrSummary" style="display:none;">
+          <div class="rr-stat">
+            <div class="rr-stat-val" id="statTotal">0</div>
+            <div class="rr-stat-lbl">Students</div>
+          </div>
+          <div class="rr-stat-sep"></div>
+          <div class="rr-stat">
+            <div class="rr-stat-val" id="statAvg">—</div>
+            <div class="rr-stat-lbl">Avg Grade</div>
+          </div>
+          <div class="rr-stat-sep"></div>
+          <div class="rr-stat">
+            <div class="rr-stat-val" id="statPending">0</div>
+            <div class="rr-stat-lbl">Pending</div>
+          </div>
+          <div class="rr-stat-sep"></div>
+          <div class="rr-stat">
+            <div class="rr-stat-val" id="statApproved">0</div>
+            <div class="rr-stat-lbl">Approved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Card: Grades Table ────────────────────────────────────────────────── -->
+    <div class="ag-card glass">
+      <div class="ag-card-head">
+        <div class="ag-card-icon">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </div>
+        <span class="ag-card-title">Student Grades</span>
+      </div>
+      <div class="ag-card-body" style="padding:0;">
+        <div class="rr-table-wrap">
+          <table class="rr-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Final Grade</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="gradesTableBody">
+              <tr>
+                <td colspan="4">
+                  <div class="rr-empty">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <p>Select an exam above to load student grades.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══ EDIT GRADE MODAL ═════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Edit Grade</h3>
+      <button class="modal-close" id="modalClose">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-field">
+      <label for="modalGrade">Final Grade (0 – 100)</label>
+      <input type="number" id="modalGrade" min="0" max="100" placeholder="e.g. 85" />
+    </div>
+    <div class="modal-field">
+      <label for="modalComment">Instructor Comment</label>
+      <textarea id="modalComment" placeholder="Optional note for this student…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-modal-save"   id="modalSave">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APPROVAL CONFIRMATION MODAL ══════════════════════════════════════════ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-modal">
+    <div class="confirm-ring">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h3>Confirm Grade Approval</h3>
+    <p id="confirmMsg">Are you sure you want to approve this grade?<br>Once approved, the grade will be locked and cannot be edited.<br>Only approved grades can be exported.</p>
+    <div class="confirm-skip-row">
+      <input type="checkbox" id="skipConfirmChk">
+      <label for="skipConfirmChk">Don't show this confirmation again</label>
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" id="confirmCancel">Cancel</button>
+      <button class="btn-confirm-ok"     id="confirmOk">Confirm Approval</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGOUT MODAL ══════════════════════════════════════════════════════════ -->
+<div class="logout-overlay" id="logoutOverlay">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign Out</h3>
+    <p>Are you sure you want to sign out of Taqdeer?</p>
+    <div class="logout-actions">
+      <button class="btn-logout-cancel" id="logoutCancel">Cancel</button>
+      <button class="btn-logout-confirm" id="logoutConfirm">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ═════════════════════════════════════════════════════════════════ -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" id="toastIcon"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<!-- Global export dropdown — must be before <script> so getElementById works at init time -->
+<div class="export-dropdown" id="exportDropdown">
+  <button class="export-item" id="exportPdfItem">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Export as PDF
+  </button>
+  <div class="export-sep"></div>
+  <button class="export-item" id="exportExcelItem">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Export as Excel (.xls)
+  </button>
+  <button class="export-item" id="exportCsvItem">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+    Export as CSV (.csv)
+  </button>
+  <div class="export-sep"></div>
+  <div style="padding:5px 12px 3px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);">Reviewed Papers</div>
+  <button class="export-item" id="exportReviewedPdfItem">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    All Papers — PDF
+  </button>
+  <button class="export-item" id="exportReviewedExcelItem">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M9 21V9"/></svg>
+    All Papers — Excel
+  </button>
+  <button class="export-item" id="exportReviewedCsvItem">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+    All Papers — CSV
+  </button>
+</div>
+
+<!-- Per-row reviewed export dropdown -->
+<div class="row-export-menu" id="rowExportMenu">
+  <button class="row-export-item" data-fmt="pdf">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Export as PDF
+  </button>
+  <button class="row-export-item" data-fmt="excel">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Export as Excel
+  </button>
+  <button class="row-export-item" data-fmt="csv">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+    Export as CSV
+  </button>
+</div>
+
+<script>
+  authGuard();
+
+  /* ── Module state ─────────────────────────────────────────────────────────── */
+  let currentExamId   = null;
+  let currentResults  = [];   // ExamResultRead[] from /results/?exam_id=
+  let currentExam     = null; // ExamRead from /exams/{id}
+  let editingResultId = null;
+
+  /* ── Sidebar toggle ─────────────────────────────────────────────────────── */
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const toggler  = document.getElementById('sidebarToggle');
+  toggler.addEventListener('click', () => {
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('open');
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('open');
+  });
+
+  /* ── Logout ─────────────────────────────────────────────────────────────── */
+  const logoutOverlay = document.getElementById('logoutOverlay');
+  document.getElementById('logoutTrigger').addEventListener('click', e => { e.preventDefault(); logoutOverlay.classList.add('active'); });
+  document.getElementById('logoutCancel').addEventListener('click',  () => logoutOverlay.classList.remove('active'));
+  document.getElementById('logoutConfirm').addEventListener('click', () => { doLogout(); });
+
+  /* ── Toast ──────────────────────────────────────────────────────────────── */
+  let toastTimer;
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    document.getElementById('toastMsg').textContent = msg;
+    t.className = 'toast ' + type;
+    if (type === 'success') icon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+    else if (type === 'info') icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    else icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  /* ── Workflow progress (per-exam) ───────────────────────────────────────── */
+  const THIS_STEP = 5;
+  const WF_STEPS  = [
+    {num:1, href:'./manage-exams.html'},
+    {num:2, href:'./rubrics.html'},
+    {num:3, href:'./answer-files.html'},
+    {num:4, href:'./auto-grading.html'},
+    {num:5, href:'./results-reviews.html'},
+  ];
+  const WF_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  const WorkflowAPI = {
+    get(examId) {
+      try {
+        const raw = localStorage.getItem('workflow:' + examId);
+        return Promise.resolve(raw ? JSON.parse(raw) : { examId, currentStep: 1, completedSteps: [] });
+      } catch { return Promise.resolve({ examId, currentStep: 1, completedSteps: [] }); }
+    },
+    put(examId, data) {
+      const wf = { examId, currentStep: data.currentStep, completedSteps: data.completedSteps };
+      localStorage.setItem('workflow:' + examId, JSON.stringify(wf));
+      return Promise.resolve(wf);
+    }
+  };
+
+  function renderWorkflow(wf) {
+    const completedSteps = (wf && wf.completedSteps) ? wf.completedSteps : [];
+    const currentStep    = (wf && wf.currentStep)    ? wf.currentStep    : THIS_STEP;
+    let completedCount = 0;
+    WF_STEPS.forEach(s => {
+      const el = document.getElementById('wps-' + s.num);
+      if (!el) return;
+      el.classList.remove('completed', 'active', 'upcoming');
+      el.onclick = null;
+      let state;
+      if (s.num === currentStep)                                         { state = 'active'; }
+      else if (s.num < currentStep || completedSteps.includes(s.num)) { state = 'completed'; completedCount++; }
+      else                                                             { state = 'upcoming'; }
+      el.classList.add(state);
+      el.querySelector('.wp-bubble').innerHTML = state === 'completed' ? WF_CHECK : s.num;
+      if (state === 'completed') el.onclick = () => { window.location.href = s.href; };
+      el.title = state === 'upcoming' ? 'Complete earlier steps first' : '';
+    });
+    const fill = document.getElementById('wpFill');
+    if (fill) fill.style.width = (Math.min(completedCount, WF_STEPS.length - 1) / WF_STEPS.length * 100) + '%';
+  }
+
+  renderWorkflow(null);
+  updateNextBtn();
+
+  /* ── Load exam list from backend ────────────────────────────────────────── */
+  async function loadExams() {
+    try {
+      const exams = await apiFetch('/exams/');
+      const sel = document.getElementById('examSelect');
+      while (sel.options.length > 1) sel.remove(1);
+      exams.forEach(ex => {
+        const opt = document.createElement('option');
+        opt.value = String(ex.id);
+        opt.textContent = ex.name + (ex.section ? ' \u2014 ' + ex.section : '');
+        sel.appendChild(opt);
+      });
+      // Auto-select from URL param or last-used exam
+      const urlId   = new URLSearchParams(window.location.search).get('examId');
+      const savedId = urlId || localStorage.getItem('currentExamId');
+      if (savedId) {
+        const match = Array.from(sel.options).find(o => o.value === String(savedId));
+        if (match) {
+          sel.value = match.value;
+          sel.dispatchEvent(new Event('change'));
+        } else if (urlId) {
+          // Exam may be archived — fetch it directly from the backend
+          try {
+            const archivedExam = await apiFetch('/exams/' + urlId);
+            const opt = document.createElement('option');
+            opt.value = String(archivedExam.id);
+            opt.textContent = archivedExam.name + (archivedExam.section ? ' \u2014 ' + archivedExam.section : '') + ' [Archived]';
+            sel.appendChild(opt);
+            sel.value = String(archivedExam.id);
+            sel.dispatchEvent(new Event('change'));
+          } catch (e2) { console.error('Failed to load archived exam:', e2); }
+        }
+      }
+    } catch (e) {
+      if (e.status !== 401) {
+        showToast(e.status === 0 ? 'Failed to connect to the server.' : 'Failed to load exams. Please try again.', 'error');
+      }
+    }
+  }
+
+  /* ── Exam select ────────────────────────────────────────────────────────── */
+  document.getElementById('examSelect').addEventListener('change', function () {
+    currentExamId = this.value || null;
+    if (currentExamId) localStorage.setItem('currentExamId', currentExamId);
+    if (!currentExamId) {
+      currentResults = [];
+      currentExam    = null;
+      renderEmpty();
+      document.getElementById('rrSummary').style.display = 'none';
+      updateNextBtn();
+      renderWorkflow(null);
+      return;
+    }
+    loadResults(currentExamId);
+  });
+
+  /* ── Load results from backend ──────────────────────────────────────────── */
+  async function loadResults(examId) {
+    setTableLoading(true);
+    try {
+      const [results, exam] = await Promise.all([
+        apiFetch('/results/?exam_id=' + examId),
+        apiFetch('/exams/' + examId),
+      ]);
+      currentResults = results;
+      currentExam    = exam;
+      renderTable();
+      updateSummary();
+      updateNextBtn();
+      let wf = await WorkflowAPI.get(examId);
+      if (wf.currentStep < THIS_STEP) {
+        const newCompleted = [...new Set([...(wf.completedSteps || []), ...Array.from({length: THIS_STEP - 1}, (_, i) => i + 1)])];
+        wf = await WorkflowAPI.put(examId, { currentStep: THIS_STEP, completedSteps: newCompleted });
+      }
+      renderWorkflow(wf);
+    } catch (e) {
+      if (e.status !== 401) {
+        showToast(e.status === 0 ? 'Failed to connect to the server.' : 'Failed to load results. Please try again.', 'error');
+      }
+      currentResults = [];
+      currentExam    = null;
+      renderEmpty();
+      updateNextBtn();
+    } finally {
+      setTableLoading(false);
+    }
+  }
+
+  function setTableLoading(on) {
+    if (on) {
+      document.getElementById('gradesTableBody').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">Loading\u2026</td></tr>';
+    }
+  }
+
+  /* ── Render helpers ─────────────────────────────────────────────────────── */
+  function gradeClass(score, totalMarks) {
+    const pct = totalMarks > 0 ? score / totalMarks * 100 : 0;
+    if (pct >= 80) return 'high';
+    if (pct >= 60) return 'mid';
+    return 'low';
+  }
+
+  function initials(name) {
+    return (name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+  function renderEmpty() {
+    document.getElementById('gradesTableBody').innerHTML = `
+      <tr><td colspan="4">
+        <div class="rr-empty">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p>Select an exam above to load student grades.</p>
+        </div>
+      </td></tr>`;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('gradesTableBody');
+    tbody.innerHTML = '';
+    if (!currentResults.length) { renderEmpty(); return; }
+    const totalMarks = currentExam ? currentExam.totalMarks : 100;
+    currentResults.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.id = 'row-' + r.id;
+      tr.innerHTML = buildRow(r, totalMarks);
+      tbody.appendChild(tr);
+    });
+    bindRowActions();
+  }
+
+  function buildRow(r, totalMarks) {
+    const gc = gradeClass(r.totalScore, totalMarks);
+    const isApproved = r.status === 'approved';
+
+    const editedIndicator = r.manuallyEdited
+      ? `<span class="grade-edited-indicator">
+           <span class="grade-edited-icon">
+             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+           </span>
+           <div class="grade-edited-tooltip">
+             <div class="get-title">
+               <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+               Grade manually updated
+             </div>
+             <div class="get-row">Score: <strong>${r.totalScore} / ${totalMarks}</strong></div>
+             <div class="get-row">Grade: <strong>${r.grade}</strong></div>
+           </div>
+         </span>`
+      : '';
+
+    const statusHtml = isApproved
+      ? '<span class="status-badge approved">Approved</span>'
+      : '<span class="status-badge pending">Pending</span>';
+
+    const lockIcon = isApproved
+      ? '<span class="lock-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>'
+      : '';
+
+    const editBtn = isApproved
+      ? `<button class="btn-edit locked" disabled>
+           <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+           Edit
+         </button>`
+      : `<button class="btn-edit" data-id="${r.id}">
+           <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+           Edit
+         </button>`;
+
+    const actionBtn = isApproved
+      ? `<button class="btn-unlock" data-id="${r.id}">
+           <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+           Unlock
+         </button>`
+      : `<button class="btn-approve-row" data-id="${r.id}">
+           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+           Approve
+         </button>`;
+
+    const reviewBtn = `<button class="btn-review" onclick="openExamReview('${currentExamId}','${r.studentId}')">
+           <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+           Review Paper
+         </button>`;
+
+    const exportRowBtn = `<button class="btn-export-row" data-result-id="${r.id}" title="Export reviewed paper">
+           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+           Export
+         </button>`;
+
+    return `
+      <td>
+        <div class="student-cell">
+          <div class="student-av">${initials(r.studentName)}</div>
+          <div>
+            <div class="student-id">${r.studentId}</div>
+            <div class="student-name">${r.studentName}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <span class="grade-val ${gc}">${r.totalScore}</span>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:2px;">/ ${totalMarks}</span>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">(${r.grade})</span>
+        ${editedIndicator}${lockIcon}
+      </td>
+      <td>${statusHtml}</td>
+      <td>
+        <div class="action-btns">
+          ${reviewBtn}
+          ${editBtn}
+          ${actionBtn}
+          ${exportRowBtn}
+        </div>
+      </td>`;
+  }
+
+  function updateSummary() {
+    const total    = currentResults.length;
+    const approved = currentResults.filter(r => r.status === 'approved').length;
+    const pending  = total - approved;
+    const avg      = total
+      ? (currentResults.reduce((a, r) => a + r.totalScore, 0) / total).toFixed(1)
+      : 0;
+    document.getElementById('statTotal').textContent    = total;
+    document.getElementById('statAvg').textContent      = avg;
+    document.getElementById('statPending').textContent  = pending;
+    document.getElementById('statApproved').textContent = approved;
+    document.getElementById('rrSummary').style.display  = total ? 'flex' : 'none';
+  }
+
+  function updateNextBtn() {
+    const btn    = document.getElementById('progressNextBtn');
+    const hintEl = document.getElementById('nextHint');
+    let hint;
+    if (!currentExamId) {
+      hint = 'Select an exam to continue';
+    } else if (!currentResults.length) {
+      hint = 'No grades available yet';
+    } else {
+      const n = currentResults.filter(r => r.status !== 'approved').length;
+      hint = n ? n + ' grade' + (n === 1 ? '' : 's') + ' still pending approval' : '';
+    }
+    btn.disabled = !!hint;
+    btn.title    = hint || 'Finish and approve all grades';
+    if (hintEl) { hintEl.textContent = hint; hintEl.style.display = hint ? '' : 'none'; }
+  }
+
+  /* ── Refresh a single result row from the backend ─────────────────────── */
+  async function refreshResult(resultId) {
+    try {
+      const updated = await apiFetch('/results/' + resultId);
+      const idx = currentResults.findIndex(r => r.id === resultId);
+      if (idx !== -1) currentResults[idx] = updated;
+      const totalMarks = currentExam ? currentExam.totalMarks : 100;
+      const tr = document.getElementById('row-' + resultId);
+      if (tr) {
+        tr.innerHTML = buildRow(updated, totalMarks);
+        bindRowActionsForRow(tr);
+      }
+      updateSummary();
+      updateNextBtn();
+    } catch (e) {
+      showToast('Failed to refresh row: ' + e.message, 'error');
+    }
+  }
+
+  function bindRowActionsForRow(tr) {
+    const editBtn = tr.querySelector('.btn-edit:not(.locked)');
+    if (editBtn) editBtn.addEventListener('click', () => openEditModal(parseInt(editBtn.dataset.id)));
+    const approveBtn = tr.querySelector('.btn-approve-row');
+    if (approveBtn) approveBtn.addEventListener('click', () => requestApproval('single', parseInt(approveBtn.dataset.id)));
+    const unlockBtn = tr.querySelector('.btn-unlock');
+    if (unlockBtn) unlockBtn.addEventListener('click', () => unlockResult(parseInt(unlockBtn.dataset.id)));
+    const exportRowBtn = tr.querySelector('.btn-export-row');
+    if (exportRowBtn) exportRowBtn.addEventListener('click', e => openRowExportMenu(e, parseInt(exportRowBtn.dataset.resultId)));
+    bindTooltipsForRow(tr);
+  }
+
+  /* ── Row action binding ─────────────────────────────────────────────────── */
+  function bindRowActions() {
+    document.querySelectorAll('.btn-edit:not(.locked)').forEach(btn => {
+      btn.addEventListener('click', () => openEditModal(parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.btn-approve-row').forEach(btn => {
+      btn.addEventListener('click', () => requestApproval('single', parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.btn-unlock').forEach(btn => {
+      btn.addEventListener('click', () => unlockResult(parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.btn-export-row').forEach(btn => {
+      btn.addEventListener('click', e => openRowExportMenu(e, parseInt(btn.dataset.resultId)));
+    });
+    bindTooltips();
+  }
+
+  /* ── Tooltip positioning (fixed, escapes overflow:hidden) ───────────────── */
+  function bindTooltips() {
+    document.querySelectorAll('.grade-edited-indicator').forEach(ind => {
+      bindTooltipsForRow(ind.closest('tr') || ind);
+    });
+  }
+
+  function bindTooltipsForRow(container) {
+    container.querySelectorAll('.grade-edited-indicator').forEach(ind => {
+      const tooltip = ind.querySelector('.grade-edited-tooltip');
+      if (!tooltip) return;
+      ind.addEventListener('mouseenter', () => {
+        const icon = ind.querySelector('.grade-edited-icon');
+        const r    = icon.getBoundingClientRect();
+        const ttH  = tooltip.offsetHeight || 88;
+        const showAbove = r.top > ttH + 16;
+        tooltip.classList.toggle('tooltip-below', !showAbove);
+        tooltip.style.top       = showAbove ? (r.top - ttH - 9) + 'px' : (r.bottom + 9) + 'px';
+        tooltip.style.left      = (r.left + r.width / 2) + 'px';
+        tooltip.style.transform = 'translateX(-50%)';
+        tooltip.classList.add('visible');
+      });
+      ind.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible', 'tooltip-below');
+      });
+    });
+  }
+
+  /* ── Unlock (backend) ────────────────────────────────────────────────────── */
+  async function unlockResult(resultId) {
+    try {
+      await apiFetch('/results/' + resultId + '/unapprove', { method: 'POST' });
+      await refreshResult(resultId);
+      showToast('Grade unlocked \u2014 can now be edited.', 'info');
+    } catch (e) {
+      showToast('Unlock failed: ' + e.message, 'error');
+    }
+  }
+
+  /* ── Approval confirmation modal ────────────────────────────────────────── */
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  let pendingApprovalTarget = null; // 'all' or an integer result id
+
+  /* Per-user localStorage key for the skip-dialog preference */
+  function _skipPrefKey() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    const uid = p ? (p.id || p.email || 'default') : 'default';
+    return 'skipApprovalConfirmDialog_' + uid;
+  }
+
+  /* Execute the actual API call — called either directly (skip) or after confirm */
+  async function executeApproval(target) {
+    if (!target) return;
+    if (target === 'all') {
+      try {
+        await apiFetch('/results/approve-all?exam_id=' + currentExamId, { method: 'POST' });
+        await loadResults(currentExamId);
+        const n = currentResults.filter(r => r.status === 'approved').length;
+        showToast(n + ' student' + (n === 1 ? '' : 's') + ' approved and locked.', 'success');
+      } catch (e) {
+        showToast('Approval failed: ' + e.message, 'error');
+      }
+    } else {
+      try {
+        await apiFetch('/results/' + target + '/approve', { method: 'POST' });
+        await refreshResult(target);
+        showToast('Grade approved and locked.', 'success');
+      } catch (e) {
+        showToast('Approval failed: ' + e.message, 'error');
+      }
+    }
+  }
+
+  function requestApproval(type, resultId) {
+    pendingApprovalTarget = type === 'all' ? 'all' : resultId;
+
+    /* Skip the modal entirely if the user previously opted out */
+    if (localStorage.getItem(_skipPrefKey()) === 'true') {
+      const target = pendingApprovalTarget;
+      pendingApprovalTarget = null;
+      executeApproval(target);
+      return;
+    }
+
+    const msg   = document.getElementById('confirmMsg');
+    const okBtn = document.getElementById('confirmOk');
+    document.getElementById('skipConfirmChk').checked = false;
+
+    if (type === 'all') {
+      msg.innerHTML     = 'Are you sure you want to approve all grades?<br><br>Approved grades are locked, but can be unlocked again if needed.';
+      okBtn.textContent = 'Approve All';
+    } else {
+      msg.innerHTML     = 'Are you sure you want to approve this grade?<br>Approved grades are locked, but can be unlocked again if needed.';
+      okBtn.textContent = 'Confirm Approval';
+    }
+    confirmOverlay.classList.add('active');
+  }
+
+  document.getElementById('confirmCancel').addEventListener('click', () => {
+    confirmOverlay.classList.remove('active');
+    pendingApprovalTarget = null;
+  });
+  confirmOverlay.addEventListener('click', e => {
+    if (e.target === confirmOverlay) {
+      confirmOverlay.classList.remove('active');
+      pendingApprovalTarget = null;
+    }
+  });
+
+  document.getElementById('confirmOk').addEventListener('click', async () => {
+    confirmOverlay.classList.remove('active');
+    if (!pendingApprovalTarget) return;
+    const target = pendingApprovalTarget;
+    pendingApprovalTarget = null;
+
+    /* Persist skip preference if checkbox was ticked */
+    if (document.getElementById('skipConfirmChk').checked) {
+      localStorage.setItem(_skipPrefKey(), 'true');
+    }
+
+    await executeApproval(target);
+  });
+
+  /* ── Approve all ────────────────────────────────────────────────────────── */
+  document.getElementById('approveAllBtn').addEventListener('click', () => {
+    if (!currentExamId) { showToast('Please select an exam first.', 'info'); return; }
+    const pending = currentResults.filter(r => r.status !== 'approved');
+    if (!pending.length) { showToast('All students are already approved.', 'info'); return; }
+    requestApproval('all');
+  });
+
+  /* ── Edit modal ─────────────────────────────────────────────────────────── */
+  const editModal = document.getElementById('editModal');
+
+  function openEditModal(resultId) {
+    const result = currentResults.find(r => r.id === resultId);
+    if (!result) return;
+    editingResultId = resultId;
+    const totalMarks = currentExam ? currentExam.totalMarks : 100;
+    document.getElementById('modalTitle').textContent = `Edit Grade \u2014 ${result.studentId}`;
+    document.getElementById('modalGrade').max         = totalMarks;
+    document.getElementById('modalGrade').placeholder = `e.g. ${Math.round(totalMarks * 0.85)}`;
+    document.getElementById('modalGrade').value       = result.totalScore;
+    document.getElementById('modalComment').value     = '';
+    editModal.classList.add('active');
+  }
+
+  function closeModal() {
+    editModal.classList.remove('active');
+    editingResultId = null;
+  }
+
+  document.getElementById('modalClose').addEventListener('click',  closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  editModal.addEventListener('click', e => { if (e.target === editModal) closeModal(); });
+
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    if (!editingResultId) return;
+    const gradeInput = document.getElementById('modalGrade');
+    const totalMarks = currentExam ? currentExam.totalMarks : 100;
+    const raw        = parseFloat(gradeInput.value);
+    if (isNaN(raw) || raw < 0 || raw > totalMarks) {
+      gradeInput.style.borderColor = '#ef4444';
+      gradeInput.focus();
+      return;
+    }
+    gradeInput.style.borderColor = '';
+    const rid = editingResultId;
+    closeModal();
+    try {
+      await apiFetch('/results/' + rid, {
+        method: 'PUT',
+        body: JSON.stringify({ totalScore: raw }),
+      });
+      await refreshResult(rid);
+      showToast('Grade updated.', 'success');
+    } catch (e) {
+      showToast('Save failed: ' + e.message, 'error');
+    }
+  });
+
+  /* ── Export menu ─────────────────────────────────────────────────────────── */
+  function exportGuard() {
+    if (!currentExamId) { showToast('Please select an exam first.', 'info'); return null; }
+    if (!currentExam)   { showToast('Exam data not loaded.', 'info'); return null; }
+    return currentExam;
+  }
+
+  const exportMenuBtn  = document.getElementById('exportMenuBtn');
+  const exportDropdown = document.getElementById('exportDropdown');
+
+  exportMenuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    var isOpen = exportDropdown.classList.contains('open');
+    exportDropdown.classList.remove('open');
+    if (!isOpen) {
+      var r = exportMenuBtn.getBoundingClientRect();
+      exportDropdown.style.top   = (r.bottom + 6) + 'px';
+      exportDropdown.style.right = (window.innerWidth - r.right) + 'px';
+      exportDropdown.style.left  = 'auto';
+      exportDropdown.classList.add('open');
+    }
+  });
+
+  document.addEventListener('click', () => exportDropdown.classList.remove('open'));
+  document.addEventListener('scroll', () => exportDropdown.classList.remove('open'), true);
+
+  document.getElementById('exportPdfItem').addEventListener('click', () => {
+    exportDropdown.classList.remove('open');
+    const exam = exportGuard();
+    if (!exam) return;
+    const approved = currentResults.filter(r => r.status === 'approved');
+    if (!approved.length) { showToast('No approved grades available for export.', 'info'); return; }
+    generatePDF(exam, approved);
+  });
+
+  document.getElementById('exportExcelItem').addEventListener('click', () => {
+    exportDropdown.classList.remove('open');
+    const exam = exportGuard();
+    if (!exam) return;
+    const approved = currentResults.filter(r => r.status === 'approved');
+    if (!approved.length) { showToast('No approved grades available for export.', 'info'); return; }
+    exportExcel(exam, approved);
+  });
+
+  document.getElementById('exportCsvItem').addEventListener('click', () => {
+    exportDropdown.classList.remove('open');
+    const exam = exportGuard();
+    if (!exam) return;
+    const approved = currentResults.filter(r => r.status === 'approved');
+    if (!approved.length) { showToast('No approved grades available for export.', 'info'); return; }
+    exportCSV(exam, approved);
+  });
+
+  /* ── Reviewed Papers — bulk export (exam-level) ──────────────────────────── */
+  async function downloadReviewedExamExport(format) {
+    if (!currentExamId) { showToast('Please select an exam first.', 'info'); return; }
+    const item = document.getElementById(
+      format === 'pdf' ? 'exportReviewedPdfItem'
+      : format === 'excel' ? 'exportReviewedExcelItem'
+      : 'exportReviewedCsvItem'
+    );
+    const origHtml = item ? item.innerHTML : '';
+    if (item) { item.style.pointerEvents = 'none'; item.style.opacity = '0.6'; }
+    try {
+      const res = await fetch(API_BASE + `/reviewed-export/exam/${currentExamId}/export/${format}`, {
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('taqdeer_token') || '') },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+      const blob        = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match       = disposition.match(/filename="?([^"]+)"?/);
+      const filename    = match ? match[1] : `reviewed_papers.${format === 'excel' ? 'xlsx' : format}`;
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      showToast('Reviewed papers exported.', 'success');
+    } catch (err) {
+      showToast('Export failed: ' + err.message, 'error');
+    } finally {
+      if (item) { item.innerHTML = origHtml; item.style.pointerEvents = ''; item.style.opacity = ''; }
+    }
+  }
+
+  document.getElementById('exportReviewedPdfItem').addEventListener('click',   () => { exportDropdown.classList.remove('open'); downloadReviewedExamExport('pdf'); });
+  document.getElementById('exportReviewedExcelItem').addEventListener('click', () => { exportDropdown.classList.remove('open'); downloadReviewedExamExport('excel'); });
+  document.getElementById('exportReviewedCsvItem').addEventListener('click',   () => { exportDropdown.classList.remove('open'); downloadReviewedExamExport('csv'); });
+
+  /* ── Per-row reviewed export menu ────────────────────────────────────────── */
+  const rowExportMenu   = document.getElementById('rowExportMenu');
+  let   _rowExportId    = null;
+
+  function openRowExportMenu(e, resultId) {
+    e.stopPropagation();
+    _rowExportId = resultId;
+    const isOpen = rowExportMenu.classList.contains('open') && rowExportMenu._forId === resultId;
+    rowExportMenu.classList.remove('open');
+    if (!isOpen) {
+      const r = e.currentTarget.getBoundingClientRect();
+      rowExportMenu.style.top   = (r.bottom + 4) + 'px';
+      rowExportMenu.style.left  = Math.min(r.left, window.innerWidth - 190) + 'px';
+      rowExportMenu.style.right = 'auto';
+      rowExportMenu._forId      = resultId;
+      rowExportMenu.classList.add('open');
+    }
+  }
+
+  document.addEventListener('click', () => rowExportMenu.classList.remove('open'));
+  document.addEventListener('scroll', () => rowExportMenu.classList.remove('open'), true);
+
+  rowExportMenu.addEventListener('click', async e => {
+    const item = e.target.closest('.row-export-item');
+    if (!item || !_rowExportId) return;
+    rowExportMenu.classList.remove('open');
+    const format = item.dataset.fmt;
+    const resultId = _rowExportId;
+    const origHtml = item.innerHTML;
+    item.style.pointerEvents = 'none'; item.style.opacity = '0.6';
+    try {
+      const res = await fetch(API_BASE + `/reviewed-export/${resultId}/export/${format}`, {
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('taqdeer_token') || '') },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+      const blob        = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match       = disposition.match(/filename="?([^"]+)"?/);
+      const filename    = match ? match[1] : `reviewed.${format === 'excel' ? 'xlsx' : format}`;
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      showToast('Export downloaded.', 'success');
+    } catch (err) {
+      showToast('Export failed: ' + err.message, 'error');
+    } finally {
+      item.innerHTML = origHtml; item.style.pointerEvents = ''; item.style.opacity = '';
+    }
+  });
+
+  function exportExcel(exam, students) {
+    const totalMarks = exam.totalMarks || 100;
+    const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const rows = students.map(r =>
+      '<Row>' +
+      '<Cell><Data ss:Type="String">' + esc(r.studentId)   + '</Data></Cell>' +
+      '<Cell><Data ss:Type="String">' + esc(r.studentName) + '</Data></Cell>' +
+      '<Cell><Data ss:Type="Number">' + r.totalScore        + '</Data></Cell>' +
+      '<Cell><Data ss:Type="Number">' + totalMarks          + '</Data></Cell>' +
+      '<Cell><Data ss:Type="String">' + esc(r.grade)        + '</Data></Cell>' +
+      '<Cell><Data ss:Type="String">' + esc(r.status)       + '</Data></Cell>' +
+      '</Row>'
+    ).join('');
+    const xml =
+      '<?xml version="1.0"?>' +
+      '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' +
+      '<Worksheet ss:Name="Grades"><Table>' +
+      '<Row>' +
+      '<Cell><Data ss:Type="String">Student ID</Data></Cell>' +
+      '<Cell><Data ss:Type="String">Name</Data></Cell>' +
+      '<Cell><Data ss:Type="String">Score</Data></Cell>' +
+      '<Cell><Data ss:Type="String">Total Marks</Data></Cell>' +
+      '<Cell><Data ss:Type="String">Grade</Data></Cell>' +
+      '<Cell><Data ss:Type="String">Status</Data></Cell>' +
+      '</Row>' + rows +
+      '</Table></Worksheet></Workbook>';
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = (exam.name || 'grades') + '.xls'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Excel file exported.', 'success');
+  }
+
+  function exportCSV(exam, students) {
+    const totalMarks = exam.totalMarks || 100;
+    const q = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+    const header = ['Student ID','Name','Score','Total Marks','Grade','Status'].join(',');
+    const rows   = students.map(r =>
+      [r.studentId, q(r.studentName), r.totalScore, totalMarks, r.grade, r.status].join(',')
+    ).join('\n');
+    const blob = new Blob([header + '\n' + rows], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = (exam.name || 'grades') + '.csv'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV exported successfully.', 'success');
+  }
+
+  function generatePDF(exam, students) {
+    const totalMarks = exam.totalMarks || 100;
+    const rows = students.map(r =>
+      '<tr>'
+      + '<td>' + r.studentId + '<\/td>'
+      + '<td>' + r.studentName + '<\/td>'
+      + '<td style="font-weight:700;">' + r.totalScore + '\/' + totalMarks + ' (' + r.grade + ')<\/td>'
+      + '<td>Approved<\/td>'
+      + '<\/tr>'
+    ).join('');
+    const total = students.length;
+    const avg   = total ? (students.reduce((a, r) => a + r.totalScore, 0) / total).toFixed(1) : 0;
+    const html = '<!DOCTYPE html>'
+      + '<html lang="en"><head><meta charset="UTF-8"/>'
+      + '<title>Results \u2014 ' + exam.name + '<\/title>'
+      + '<style>* { box-sizing: border-box; margin: 0; padding: 0; }'
+      + 'body { font-family: "Segoe UI", Arial, sans-serif; color: #1e293b; padding: 48px; background: #fff; }'
+      + '.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e3a5f; padding-bottom: 18px; margin-bottom: 28px; }'
+      + '.org { font-size: 22px; font-weight: 800; color: #1e3a5f; }'
+      + '.doc-title { font-size: 13px; color: #64748b; margin-top: 4px; }'
+      + '.meta-block { text-align: right; font-size: 12px; color: #64748b; line-height: 1.7; }'
+      + '.meta-block strong { color: #1e293b; }'
+      + 'h2 { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-bottom: 16px; }'
+      + '.summary { display: flex; gap: 32px; margin-bottom: 28px; }'
+      + '.sum-item { display: flex; flex-direction: column; gap: 3px; }'
+      + '.sum-val { font-size: 22px; font-weight: 900; color: #1e3a5f; }'
+      + '.sum-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; font-weight: 600; }'
+      + 'table { width: 100%; border-collapse: collapse; font-size: 13px; }'
+      + 'thead tr { background: #1e3a5f; color: #fff; }'
+      + 'th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }'
+      + 'td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }'
+      + 'tbody tr:nth-child(even) td { background: #f8fafc; }'
+      + '.footer { margin-top: 36px; border-top: 1px solid #e2e8f0; padding-top: 14px; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }'
+      + '@media print { body { padding: 24px; } }<\/style><\/head><body>'
+      + '<div class="header"><div><div class="org">Taqdeer<\/div><div class="doc-title">Exam Results Report<\/div><\/div>'
+      + '<div class="meta-block"><div><strong>Exam:<\/strong> ' + exam.name + '<\/div>'
+      + '<div><strong>Date:<\/strong> ' + (exam.date || '\u2014') + '<\/div>'
+      + (exam.semester ? '<div><strong>Semester:<\/strong> ' + ({ first: 'First Semester', second: 'Second Semester', summer: 'Summer Semester' }[exam.semester] || '') + '<\/div>' : '')
+      + '<div><strong>Generated:<\/strong> ' + new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) + '<\/div><\/div><\/div>'
+      + '<h2>Summary<\/h2><div class="summary">'
+      + '<div class="sum-item"><div class="sum-val">' + total + '<\/div><div class="sum-lbl">Students<\/div><\/div>'
+      + '<div class="sum-item"><div class="sum-val">' + avg   + '<\/div><div class="sum-lbl">Avg Score<\/div><\/div>'
+      + '<div class="sum-item"><div class="sum-val">' + total + '<\/div><div class="sum-lbl">Approved<\/div><\/div><\/div>'
+      + '<h2>Student Results<\/h2><table><thead><tr>'
+      + '<th>Student ID<\/th><th>Name<\/th><th>Final Score<\/th><th>Status<\/th>'
+      + '<\/tr><\/thead><tbody>' + rows + '<\/tbody><\/table>'
+      + '<div class="footer"><span>Taqdeer \u2014 Academic Grading Platform<\/span>'
+      + '<span>This document is for instructor use only.<\/span><\/div><\/body><\/html>';
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
+    showToast('PDF report opened for printing.', 'success');
+  }
+
+  /* ── Next button (Finish / Approve step) ───────────────────────────────── */
+  document.getElementById('progressNextBtn').addEventListener('click', async () => {
+    if (!currentExamId) return;
+    const wf = await WorkflowAPI.get(currentExamId);
+    const newCompleted = [...new Set([...(wf.completedSteps || []), THIS_STEP])];
+    const updated = await WorkflowAPI.put(currentExamId, { currentStep: THIS_STEP, completedSteps: newCompleted });
+    renderWorkflow(updated);
+    showToast('All grades approved. Workflow complete!', 'success');
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DEMO DATA SEEDING — removed; data now comes from the backend API.
+     ══════════════════════════════════════════════════════════════════════════ */
+  (function seedDemoData() { return; // disabled
+    const raw = localStorage.getItem('taqdeer_exams');
+    let existing = [];
+    try { existing = JSON.parse(raw) || []; } catch(e) { existing = []; }
+    if (existing.length > 0) return; // already have exams — skip
+
+    const DEMO_EXAMS = [
+      { id: 'demo-math-mid',   name: 'Midterm Exam', subject: 'Mathematics',      students: 15, totalMarks: 100, date: '2025-03-12', semester: 'Spring 2025', status: 'active' },
+      { id: 'demo-phys-final', name: 'Final Exam',   subject: 'Physics',          students: 12, totalMarks: 100, date: '2025-06-05', semester: 'Spring 2025', status: 'active' },
+      { id: 'demo-cs-quiz',    name: 'Quiz 3',       subject: 'Computer Science', students: 10, totalMarks:  50, date: '2025-04-28', semester: 'Spring 2025', status: 'active' },
+    ];
+
+    const DEMO_STUDENTS = {
+      'demo-math-mid': [
+        { id:'STU-001', name:'Ahmed Al-Rashidi',   grade:92, status:'approved', comment:'Excellent work.', manuallyEdited:false },
+        { id:'STU-002', name:'Fatima Al-Zahraa',   grade:78, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-003', name:'Omar Al-Farouq',     grade:61, status:'pending',  comment:'Needs improvement.', manuallyEdited:false },
+        { id:'STU-004', name:'Maryam Al-Nuaimi',   grade:85, status:'approved', comment:'Good effort.',   manuallyEdited:false },
+        { id:'STU-005', name:'Yusuf Al-Hamdan',    grade:47, status:'pending',  comment:'Below passing.',  manuallyEdited:false },
+        { id:'STU-006', name:'Nora Al-Subaie',     grade:73, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-007', name:'Khalid Al-Otaibi',   grade:88, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-008', name:'Layla Al-Dosari',    grade:55, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-009', name:'Ibrahim Al-Shehri',  grade:96, status:'approved', comment:'Outstanding.',   manuallyEdited:false },
+        { id:'STU-010', name:'Hessa Al-Mutairi',   grade:70, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-011', name:'Saad Al-Qurashi',    grade:38, status:'pending',  comment:'Failed.',         manuallyEdited:false },
+        { id:'STU-012', name:'Reem Al-Ghamdi',     grade:81, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-013', name:'Turki Al-Anzi',      grade:67, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-014', name:'Dana Al-Zahrani',    grade:90, status:'approved', comment:'Great student.',  manuallyEdited:false },
+        { id:'STU-015', name:'Mansour Al-Harbi',   grade:54, status:'pending',  comment:'',                manuallyEdited:false },
+      ],
+      'demo-phys-final': [
+        { id:'STU-101', name:'Sara Al-Otaibi',     grade:88, status:'approved', comment:'Well done.',     manuallyEdited:false },
+        { id:'STU-102', name:'Faisal Al-Ajmi',     grade:72, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-103', name:'Hind Al-Rashid',     grade:65, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-104', name:'Salman Al-Dossari',  grade:91, status:'approved', comment:'Excellent.',     manuallyEdited:false },
+        { id:'STU-105', name:'Aisha Al-Hamad',     grade:44, status:'pending',  comment:'Below pass.',    manuallyEdited:false },
+        { id:'STU-106', name:'Nawaf Al-Bisher',    grade:77, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-107', name:'Rawan Al-Mutairi',   grade:59, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-108', name:'Abdulaziz Al-Salim', grade:83, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-109', name:'Khadija Al-Nasser',  grade:97, status:'approved', comment:'Top of class.',  manuallyEdited:false },
+        { id:'STU-110', name:'Badr Al-Saud',       grade:36, status:'pending',  comment:'Needs support.', manuallyEdited:false },
+        { id:'STU-111', name:'Manal Al-Ghamdi',    grade:70, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-112', name:'Waleed Al-Jabri',    grade:62, status:'pending',  comment:'',                manuallyEdited:false },
+      ],
+      'demo-cs-quiz': [
+        { id:'STU-201', name:'Dina Al-Khatib',     grade:96, status:'approved', comment:'Perfect.',       manuallyEdited:false },
+        { id:'STU-202', name:'Saud Al-Fahad',      grade:80, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-203', name:'Nadia Al-Rashidi',   grade:68, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-204', name:'Hamad Al-Buainain',  grade:52, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-205', name:'Eman Al-Subaie',     grade:88, status:'approved', comment:'Great quiz.',    manuallyEdited:false },
+        { id:'STU-206', name:'Yazeed Al-Qahtani',  grade:40, status:'pending',  comment:'Failed.',        manuallyEdited:false },
+        { id:'STU-207', name:'Amani Al-Shehri',    grade:74, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-208', name:'Saleh Al-Harbi',     grade:60, status:'pending',  comment:'',                manuallyEdited:false },
+        { id:'STU-209', name:'Ghada Al-Zaidi',     grade:92, status:'approved', comment:'Excellent.',     manuallyEdited:false },
+        { id:'STU-210', name:'Majed Al-Anzi',      grade:56, status:'pending',  comment:'',                manuallyEdited:false },
+      ],
+    };
+
+    // Seed taqdeer_exams
+    localStorage.setItem('taqdeer_exams', JSON.stringify(DEMO_EXAMS));
+
+    // Seed results:{examId} for each demo exam
+    DEMO_EXAMS.forEach(exam => {
+      const key = 'results:' + exam.id;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify({
+          name: exam.name,
+          date: exam.date,
+          totalMarks: exam.totalMarks,
+          students: DEMO_STUDENTS[exam.id] || [],
+        }));
+      }
+    });
+
+    // Populate dropdown immediately after seeding (don't wait for end of script)
+    populateExamDropdown();
+  }());
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     EXAM QUESTION BANKS
+     ══════════════════════════════════════════════════════════════════════════ */
+  const EXAM_QUESTIONS = {
+    'demo-math-mid': {
+      subject: 'Mathematics',
+      questions: [
+        { text: 'Solve the system of linear equations: 3x + 2y = 12 and x − y = 1. Show all working.', maxPts: 20 },
+        { text: 'Find the derivative of f(x) = 4x³ − 7x² + 3x − 9 and evaluate f′(2).', maxPts: 20 },
+        { text: 'A geometric sequence has first term a = 6 and common ratio r = ½. Find the sum of the first 8 terms.', maxPts: 20 },
+        { text: 'Evaluate the definite integral ∫₁⁴ (2x + √x) dx. Show all steps clearly.', maxPts: 20 },
+        { text: 'A triangle has sides of length 7, 10, and 13. Calculate the area using Heron\'s formula.', maxPts: 20 },
+      ],
+    },
+    'demo-phys-final': {
+      subject: 'Physics',
+      questions: [
+        { text: 'A 5 kg block is pushed along a horizontal surface with a net force of 15 N. Calculate its acceleration and the distance covered in 4 seconds starting from rest.', maxPts: 20 },
+        { text: 'Describe the photoelectric effect and derive the Einstein equation for maximum kinetic energy of emitted electrons.', maxPts: 20 },
+        { text: 'A wave has frequency 400 Hz and wavelength 0.85 m. Calculate its speed and determine how far it travels in 3 seconds.', maxPts: 20 },
+        { text: 'An ideal gas at 300 K occupies 2.0 L at 1.5 atm pressure. Using the ideal gas law, find the new volume at 450 K and 2.0 atm.', maxPts: 20 },
+        { text: 'A 0.5 kg mass on a spring (k = 200 N/m) undergoes simple harmonic motion. Find the period, frequency, and maximum speed if the amplitude is 0.1 m.', maxPts: 20 },
+      ],
+    },
+    'demo-cs-quiz': {
+      subject: 'Computer Science',
+      questions: [
+        { text: 'Explain the difference between a stack and a queue. Give one real-world application of each data structure.', maxPts: 10 },
+        { text: 'Trace the bubble sort algorithm on the array [5, 3, 8, 1, 9, 2]. Show each pass and count the total comparisons made.', maxPts: 10 },
+        { text: 'What is Big-O notation? Classify the following complexities from best to worst: O(n²), O(log n), O(n), O(1), O(n log n).', maxPts: 10 },
+        { text: 'Write pseudocode for a binary search algorithm on a sorted array. Explain why it is more efficient than linear search.', maxPts: 10 },
+        { text: 'Describe the four pillars of Object-Oriented Programming (OOP) and give a brief example illustrating each concept.', maxPts: 10 },
+      ],
+    },
+    /* Quiz 3 — Algorithms, CS-401-B (manage-exams id: 2) */
+    '2': {
+      subject: 'Algorithms',
+      questions: [
+        {
+          text: 'Compare Merge Sort and Quick Sort. State the worst-case and average-case time complexity of each algorithm, and describe a scenario where you would prefer one over the other.',
+          maxPts: 25,
+          demoAnswer: 'Merge Sort always divides the array into two halves recursively and merges them, giving O(n log n) in all cases. Quick Sort selects a pivot and partitions the array around it; its average case is O(n log n) but worst case is O(n²) when the pivot is always the smallest or largest element. I would prefer Merge Sort when stability is required or when sorting linked lists, and Quick Sort for in-place sorting of large arrays where average performance matters.',
+          demoReasoning: 'Full credit awarded. The student correctly identified the worst-case complexities (O(n log n) for Merge Sort in all cases, O(n²) for Quick Sort in the worst case) and provided a well-reasoned comparison including a concrete use-case justification for each algorithm. No significant omissions were found.',
+          demoScore: 22,
+        },
+        {
+          text: 'Trace Dijkstra\'s shortest-path algorithm on the weighted directed graph: A→B(4), A→C(2), C→B(1), B→D(5), C→D(8). Show the distance table after each relaxation step and state the final shortest distances from A.',
+          maxPts: 25,
+          demoAnswer: 'Initial distances: A=0, B=∞, C=∞, D=∞. Step 1: visit A, update B=4, C=2. Step 2: visit C (dist 2), update B=min(4, 2+1)=3, D=min(∞, 2+8)=10. Step 3: visit B (dist 3), update D=min(10, 3+5)=8. Step 4: visit D (dist 8). Final: A=0, B=3, C=2, D=8.',
+          demoReasoning: 'Partial credit awarded. The student correctly identified the greedy visit order and the final shortest distances. However, the relaxation step for D via C was calculated but the intermediate table was not shown explicitly after each step as required — only final updates were listed. The core algorithm was applied correctly, but the step-by-step table was incomplete, resulting in a deduction.',
+          demoScore: 18,
+        },
+        {
+          text: 'Define dynamic programming and explain its two key properties. Then solve the 0/1 Knapsack problem with capacity W=5 and items: {weight:2, value:3}, {weight:3, value:4}, {weight:4, value:5}.',
+          maxPts: 25,
+          demoAnswer: 'Dynamic programming breaks problems into overlapping subproblems and stores results to avoid recomputation (memoization/tabulation). The two key properties are: (1) Optimal substructure — the optimal solution contains optimal sub-solutions. (2) Overlapping subproblems — the same sub-problems are solved multiple times. For the knapsack: build a 2D table dp[i][w]. With items in order and W=5: dp[2][2]=3, dp[2][5]=3; dp[3][3]=4, dp[3][5]=7 (items 1+2); dp[4][4]=5, dp[4][5]=7. Maximum value = 7 (items of weight 2 and 3).',
+          demoReasoning: 'Near-full credit. The student correctly defined dynamic programming, stated both required properties accurately, and built the DP table with correct recurrence. The final answer of 7 is correct. A minor deduction was applied because the table construction skipped the explicit base-case row (i=0, all zeros) and the derivation of the last row was condensed without showing all intermediate cell values.',
+          demoScore: 20,
+        },
+        {
+          text: 'A hash table uses separate chaining. With 100 slots and load factor λ = 0.75, how many elements does it hold? Explain how average-case O(1) is achieved for search, insert, and delete operations, and describe when performance degrades.',
+          maxPts: 25,
+          demoAnswer: 'With 100 slots and λ=0.75, it holds 75 elements (100 × 0.75). Average O(1) is achieved because the hash function distributes keys uniformly, so each chain has length ≈ λ = 0.75 on average. Insert: hash the key, append to the chain. Search: hash the key, scan the chain. Delete: hash the key, remove from chain. Performance degrades when load factor grows above 1 or when the hash function is poor, causing many collisions and long chains.',
+          demoReasoning: 'Limited credit. The student correctly computed the element count (75) and gave an accurate description of insert and search. However, the explanation for why O(1) holds was incomplete — the student mentioned uniform distribution but did not formally connect λ to expected chain length. The degradation condition (high load factor or poor hash function) was mentioned but not quantified. Delete was only briefly addressed with no mention of relinking or tombstoning strategies.',
+          demoScore: 12,
+        },
+      ],
+    },
+  };
+
+  function getExamQuestions(examId, totalMarks) {
+    if (EXAM_QUESTIONS[examId]) return EXAM_QUESTIONS[examId];
+    // Generic fallback for non-demo exams
+    const perQ = Math.floor(totalMarks / 5);
+    const lastQ = totalMarks - perQ * 4;
+    return {
+      subject: 'General',
+      questions: [
+        { text: 'Explain the fundamental principles and key concepts underlying this subject area.', maxPts: perQ },
+        { text: 'Analyze the given scenario and apply the appropriate theoretical framework to derive a solution.', maxPts: perQ },
+        { text: 'Compare and contrast two major approaches to solving this type of problem, highlighting trade-offs.', maxPts: perQ },
+        { text: 'Design a structured solution to the following multi-step problem, showing all intermediate steps.', maxPts: perQ },
+        { text: 'Critically evaluate the methodology used and suggest improvements with justification.', maxPts: lastQ },
+      ],
+    };
+  }
+
+  /* ── Seeded PRNG (LCG) for consistent mock data ────────────────────────── */
+  function seededRand(seed) {
+    let s = seed;
+    return function() {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+  }
+
+  /* ── Distribute total score proportionally across questions ────────────── */
+  function distributeScores(total, questions, seed) {
+    const maxPts = questions.map(q => q.maxPts);
+    const totalMax = maxPts.reduce((a, b) => a + b, 0);
+    const rand = seededRand(seed);
+    const scores = maxPts.map((mp, i) => {
+      const base = (mp / totalMax) * total;
+      // Small seeded variance (±10% of maxPts), clamped to [0, mp]
+      const variance = (rand() - 0.5) * 0.2 * mp;
+      return Math.max(0, Math.min(mp, Math.round(base + variance)));
+    });
+    // Fix rounding gap
+    const sum = scores.reduce((a, b) => a + b, 0);
+    const diff = total - sum;
+    // Apply diff to the question with most headroom
+    if (diff !== 0) {
+      const idx = scores.reduce((best, v, i) => {
+        const room = diff > 0 ? (maxPts[i] - v) : v;
+        return room > (diff > 0 ? (maxPts[best] - scores[best]) : scores[best]) ? i : best;
+      }, 0);
+      scores[idx] = Math.max(0, Math.min(maxPts[idx], scores[idx] + diff));
+    }
+    return scores;
+  }
+
+  /* ── Generate mock student answer text ─────────────────────────────────── */
+  function generateAnswer(qIdx, score, maxPts, subject, question) {
+    if (question && question.demoAnswer) return question.demoAnswer;
+    const pct = maxPts > 0 ? score / maxPts : 0;
+    const HIGH = [
+      `The student provided a thorough and accurate response, demonstrating mastery of the core concepts. All steps were correctly applied and the final answer was reached through sound reasoning. Supporting work was shown clearly throughout.`,
+      `An excellent answer that addressed all parts of the question. The student correctly identified the relevant principles and applied them methodically. No significant errors or omissions were found in the response.`,
+      `The student demonstrated clear understanding and produced a complete, well-structured response. The correct formula and approach were chosen, and the calculations were accurate with proper units where applicable.`,
+    ];
+    const MID = [
+      `The student identified the correct approach and began well, but made an arithmetic error mid-way that led to an incorrect final answer. The conceptual understanding was evident despite the computational mistake.`,
+      `A partially correct response. The student correctly stated the relevant concept but could not fully develop the solution. The setup was appropriate, however key steps were missing or insufficient.`,
+      `The student showed some understanding of the topic and attempted a logical approach, but the answer was incomplete. Critical parts of the required explanation were left out or only vaguely addressed.`,
+    ];
+    const LOW = [
+      `The student's response was mostly incorrect. While there was a brief mention of a relevant term, the explanation lacked depth and the approach taken did not align with the expected method.`,
+      `An incomplete attempt. The student wrote a short response that did not address the question adequately. Key formulas, definitions, or analytical steps were absent.`,
+      `The answer did not demonstrate understanding of the question requirements. The student's response was off-topic or based on a misunderstanding of the core concept being tested.`,
+    ];
+    const pool = pct >= 0.8 ? HIGH : pct >= 0.5 ? MID : LOW;
+    return pool[qIdx % 3];
+  }
+
+  /* ── Generate AI reasoning text ─────────────────────────────────────────── */
+  function generateReasoning(qIdx, score, maxPts, question) {
+    if (question && question.demoReasoning) return question.demoReasoning;
+    const pct = maxPts > 0 ? score / maxPts : 0;
+    const qualifiers = [
+      'the underlying principle',
+      'the required methodology',
+      'the key theoretical framework',
+      'the correct analytical approach',
+      'the expected solution structure',
+    ];
+    const q = qualifiers[qIdx % qualifiers.length];
+    if (score === maxPts) return `Full credit awarded. The student demonstrated a complete and accurate understanding of ${q}. All required components were present and correctly executed.`;
+    if (pct >= 0.8)        return `Near-full credit. The student showed strong understanding of ${q} with only a minor error or omission that prevented a perfect score.`;
+    if (pct >= 0.6)        return `Partial credit. The student identified ${q} but missed key details or made errors that significantly impacted the correctness of the final answer.`;
+    if (pct >= 0.4)        return `Limited credit. The student showed some awareness of ${q} but the response lacked sufficient depth, accuracy, or completeness for higher marks.`;
+    return `Minimal credit. The response did not adequately address ${q}. Critical components of the expected answer were absent or fundamentally incorrect.`;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     EXAM PAPER DRAWER
+     ══════════════════════════════════════════════════════════════════════════ */
+  const AVATAR_COLORS = ['#446B95','#2e7d6b','#7c5c9e','#c0632a','#7a3e3e','#3a5f3a','#5a6e8c'];
+
+  function avatarColor(studentId) {
+    let h = 0;
+    for (let i = 0; i < studentId.length; i++) h = ((h << 5) - h) + studentId.charCodeAt(i);
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+  }
+
+  function avatarInitials(name) {
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  async function openExamPaper(examId, studentId) {
+    try {
+    if (!currentExam) { showToast('No exam loaded.', 'error'); return; }
+    const result = currentResults.find(r => String(r.studentId) === String(studentId));
+    if (!result) { showToast('Student not found: ' + studentId, 'error'); return; }
+
+    const student = { name: result.studentName, status: result.status };
+    const exam    = { name: currentExam.name, date: currentExam.date, totalMarks: currentExam.totalMarks };
+    const totalMarks = exam.totalMarks || 100;
+
+    // Load per-question scores from backend
+    const qScores = await apiFetch('/results/' + result.id + '/question-scores');
+
+    // Build header
+    const aColor = avatarColor(studentId);
+    const initials = avatarInitials(student.name);
+    const statusCls = student.status === 'approved' ? 'approved' : 'pending';
+    const statusLabel = student.status === 'approved' ? 'Approved' : 'Pending Review';
+    const currentTotal = qScores.reduce((a, qs) => a + qs.score, 0);
+
+    // Build question cards
+    const qCards = qScores.map((qs, i) => {
+      const score = qs.score;
+      const originalScore = qs.originalScore;
+      const isEdited = score !== originalScore;
+      const editedHtml = isEdited ? `
+        <span class="ep-q-edited">
+          <span class="ep-q-edited-icon">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </span>
+          <div class="ep-q-edited-tooltip">
+            <div class="get-title">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Score manually adjusted
+            </div>
+            <div class="get-row">Original: <strong>${originalScore} / ${qs.maxScore}</strong></div>
+            <div class="get-row">Updated: <strong>${score} / ${qs.maxScore}</strong></div>
+          </div>
+        </span>` : '';
+
+      const answerText = qs.studentAnswer || '(No answer recorded)';
+      const reasoningText = qs.aiReasoning || '(No AI reasoning available)';
+
+      return `
+        <div class="ep-question" data-q-idx="${i}">
+          <div class="ep-q-header">
+            <span class="ep-q-num">Q${i + 1}</span>
+            <span class="ep-q-text">${qs.questionText}</span>
+          </div>
+          <div class="ep-q-body">
+            <div class="ep-answer-block">
+              <div class="ep-block-label">
+                <svg viewBox="0 0 24 24"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
+                Student Answer
+              </div>
+              <div class="ep-answer-text">${answerText}</div>
+            </div>
+            <div class="ep-reasoning-block">
+              <div class="ep-block-label">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                AI Reasoning
+              </div>
+              <div class="ep-reasoning-text collapsed" data-reasoning-el>${reasoningText}</div>
+              <button class="ep-toggle-btn" data-toggle-reasoning onclick="toggleEpReasoning(this)">Show more</button>
+            </div>
+            <div class="ep-score-row">
+              <span class="ep-score-label">Score:</span>
+              ${editedHtml}
+              <input class="ep-score-input" type="number" min="0" max="${qs.maxScore}"
+                value="${score}" data-max="${qs.maxScore}" data-q-idx="${i}"
+                data-original="${originalScore}" data-score-id="${qs.id}">
+              <span class="ep-score-max">/ ${qs.maxScore} pts</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Inject content into overlay — build header via innerHTML to avoid querySelector-null errors
+    const overlay = document.getElementById('examPaperOverlay');
+    const panel = overlay.querySelector('.ep-panel');
+
+    panel.innerHTML = `
+      <div class="ep-header">
+        <div class="ep-student-row">
+          <div class="ep-avatar" style="background:${aColor}">${initials}</div>
+          <div class="ep-student-info">
+            <div class="ep-student-name">${student.name}</div>
+            <div class="ep-student-id">${studentId}</div>
+          </div>
+          <span class="status-badge ${statusCls}">${statusLabel}</span>
+          <div class="ep-actions-row">
+            <button class="ep-expand" title="Expand" onclick="toggleExpandPaper()">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--text-muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            </button>
+            <button class="ep-close" title="Close" onclick="closeExamPaper()">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--text-muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="ep-total-strip">
+        <div class="ep-exam-label"><strong>${exam.name}</strong>${exam.date ? ' &middot; ' + exam.date : ''}</div>
+        <span class="ep-total-val" id="epTotalDisplay">${currentTotal} / ${totalMarks}</span>
+        <button class="ep-save-btn" id="epSaveBtn" style="display:none" onclick="saveExamPaperChanges()">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Changes
+        </button>
+      </div>
+      <div class="ep-body">${qCards}</div>
+    `;
+
+    // Store context on overlay for save
+    overlay.dataset.examId = examId;
+    overlay.dataset.studentId = studentId;
+    overlay.dataset.totalMax = totalMarks;
+    overlay.dataset.resultId = result.id;
+
+    const saveBtn = overlay.querySelector('.ep-save-btn');
+
+    // Wire up score inputs
+    overlay.querySelectorAll('.ep-score-input').forEach(input => {
+      input.addEventListener('input', () => {
+        // Clamp value
+        const max = parseInt(input.dataset.max);
+        let val = parseInt(input.value) || 0;
+        if (val < 0) val = 0;
+        if (val > max) val = max;
+        input.value = val;
+
+        // Update total display
+        const newTotal = [...overlay.querySelectorAll('.ep-score-input')]
+          .reduce((sum, el) => sum + (parseInt(el.value) || 0), 0);
+        overlay.querySelector('#epTotalDisplay').textContent = newTotal + ' / ' + totalMarks;
+
+        // Toggle per-question edited indicator
+        const orig = parseInt(input.dataset.original);
+        const qBody = input.closest('.ep-q-body');
+        const scoreRow = input.closest('.ep-score-row');
+        let editedSpan = scoreRow.querySelector('.ep-q-edited');
+        if (val !== orig) {
+          if (!editedSpan) {
+            editedSpan = document.createElement('span');
+            editedSpan.className = 'ep-q-edited';
+            editedSpan.innerHTML = `
+              <span class="ep-q-edited-icon">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </span>
+              <div class="ep-q-edited-tooltip">
+                <div class="get-title">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Score manually adjusted
+                </div>
+                <div class="get-row">Original: <strong>${orig} / ${max}</strong></div>
+                <div class="get-row updated-row">Updated: <strong>${val} / ${max}</strong></div>
+              </div>`;
+            scoreRow.insertBefore(editedSpan, input);
+          } else {
+            editedSpan.querySelector('.updated-row').innerHTML = `Updated: <strong>${val} / ${max}</strong>`;
+          }
+        } else if (editedSpan) {
+          editedSpan.remove();
+        }
+
+        // Check if any score differs from original → show/hide save button
+        const anyChanged = [...overlay.querySelectorAll('.ep-score-input')].some(el => {
+          return (parseInt(el.value) || 0) !== parseInt(el.dataset.original);
+        });
+        saveBtn.style.display = anyChanged ? 'flex' : 'none';
+      });
+    });
+
+    overlay.classList.add('active');
+    _initEpReasoningToggles(overlay);
+    } catch(err) { showToast('Error opening exam paper: ' + err.message, 'error'); }
+  }
+
+  function toggleEpReasoning(btn) {
+    const el = btn.previousElementSibling;
+    const collapsed = el.classList.toggle('collapsed');
+    btn.textContent = collapsed ? 'Show more' : 'Show less';
+  }
+
+  function _initEpReasoningToggles(container) {
+    container.querySelectorAll('[data-reasoning-el]').forEach(el => {
+      const btn = el.nextElementSibling;
+      if (!btn) return;
+      el.classList.add('collapsed');
+      const needsToggle = el.scrollHeight > el.clientHeight + 2;
+      if (!needsToggle) {
+        el.classList.remove('collapsed');
+        btn.style.display = 'none';
+      }
+    });
+  }
+
+  function closeExamPaper() {
+    const overlay = document.getElementById('examPaperOverlay');
+    overlay.classList.remove('active');
+    overlay.querySelector('.ep-panel').classList.remove('expanded');
+  }
+
+  function toggleExpandPaper() {
+    document.getElementById('examPaperOverlay').querySelector('.ep-panel').classList.toggle('expanded');
+  }
+
+  async function saveExamPaperChanges() {
+    const overlay  = document.getElementById('examPaperOverlay');
+    const resultId = overlay.dataset.resultId;
+    const totalMax = parseInt(overlay.dataset.totalMax) || 100;
+
+    const inputs   = [...overlay.querySelectorAll('.ep-score-input')];
+    const changed  = inputs.filter(el => (parseInt(el.value) || 0) !== parseInt(el.dataset.original));
+    if (changed.length === 0) return;
+
+    const saveBtn = overlay.querySelector('#epSaveBtn');
+    saveBtn.disabled = true; saveBtn.style.opacity = '0.6';
+
+    try {
+      await Promise.all(changed.map(el =>
+        apiFetch('/results/' + resultId + '/question-scores/' + el.dataset.scoreId, {
+          method: 'PUT',
+          body: JSON.stringify({ score: parseInt(el.value) || 0 }),
+        })
+      ));
+      const updated = await apiFetch('/results/' + resultId);
+      overlay.querySelector('#epTotalDisplay').textContent =
+        parseFloat(updated.totalScore) + ' / ' + totalMax;
+      inputs.forEach(el => { el.dataset.original = parseInt(el.value) || 0; });
+      saveBtn.style.display = 'none';
+      closeExamPaper();
+      await refreshResult(parseInt(resultId));
+      showToast('Scores saved — grade updated to ' + updated.grade, 'success');
+    } catch (e) {
+      showToast('Save failed: ' + e.message, 'error');
+    } finally {
+      saveBtn.disabled = false; saveBtn.style.opacity = '';
+    }
+  }
+
+  /* ── Navigate to full exam review page ──────────────────────────────────── */
+  function openExamReview(examId, studentId) {
+    try {
+      if (!currentExam) { showToast('No exam loaded.', 'error'); return; }
+      const result = currentResults.find(r => String(r.studentId) === String(studentId));
+      if (!result) { showToast('Student not found', 'error'); return; }
+
+      const totalMarks = currentExam.totalMarks || 100;
+      const qBank = getExamQuestions(examId, totalMarks);
+      const questions = qBank.questions;
+
+      // Load or generate per-question scores (mock display data)
+      const paperKey = 'exam-paper:' + examId + ':' + studentId;
+      let paperData = null;
+      try { paperData = JSON.parse(localStorage.getItem(paperKey)); } catch(e) {}
+
+      let scores, originalScores;
+      if (paperData && paperData.scores && paperData.scores.length === questions.length) {
+        scores = paperData.scores.slice();
+        originalScores = paperData.originalScores.slice();
+      } else {
+        const hasDemoScores = questions.every(q => typeof q.demoScore === 'number');
+        if (hasDemoScores) {
+          scores = questions.map(q => q.demoScore);
+        } else {
+          const seed = String(studentId).split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 0)
+                     ^ String(examId).split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 0);
+          scores = distributeScores(Math.round(result.totalScore), questions, seed);
+        }
+        originalScores = scores.slice();
+        localStorage.setItem(paperKey, JSON.stringify({ scores, originalScores }));
+      }
+
+      const ctx = {
+        examId,
+        studentId,
+        examName:      currentExam.name,
+        examSection:   currentExam.section  || '',
+        examType:      currentExam.type     || '',
+        examDate:      currentExam.date     || '',
+        examSemester:  '',
+        dept:          currentExam.dept     || qBank.subject || '',
+        totalMarks,
+        studentName:   result.studentName,
+        studentStatus: result.status,
+        studentGrade:  result.totalScore,
+        questions: questions.map((q, i) => ({
+          text:          q.text,
+          answer:        generateAnswer(i, scores[i], q.maxPts, qBank.subject, q),
+          reasoning:     generateReasoning(i, scores[i], q.maxPts, q),
+          maxPts:        q.maxPts,
+          score:         scores[i],
+          originalScore: originalScores[i],
+        })),
+      };
+
+      localStorage.setItem('exam-review-context', JSON.stringify(ctx));
+      window.location.href = 'exam-review.html';
+    } catch(err) {
+      showToast('Error: ' + err.message, 'error');
+    }
+  }
+
+  /* ── Keyboard shortcut: ESC to close drawer ─────────────────────────────── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeExamPaper();
+  });
+
+  /* ── Init: load exams from backend (auto-selects last used exam) ─────────── */
+  loadExams();
+
+  /* ── Load profile chip ───────────────────────────────────────────────────── */
+  (function() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    if (p) {
+      const av      = document.getElementById('chipAvatar');
+      const nm      = document.getElementById('chipName');
+      const _parts  = (p.fullName || p.email || '').trim().split(/\s+/);
+      const _inits  = _parts.map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || '?';
+      const _avUrl  = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+      if (nm) nm.textContent = getDisplayName(p) || p.email || '';
+      if (av) {
+        if (_avUrl) {
+          av.innerHTML = `<img src="${_avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        } else {
+          av.textContent = _inits;
+        }
+      }
+    }
+  })();
+</script>
+
+<!-- ══ EXAM PAPER DRAWER ══════════════════════════════════════════════════ -->
+<div class="ep-overlay" id="examPaperOverlay">
+  <div class="ep-backdrop" onclick="closeExamPaper()"></div>
+  <div class="ep-panel">
+
+    <!-- Header -->
+    <div class="ep-header">
+      <div class="ep-student-row">
+        <div class="ep-avatar"></div>
+        <div class="ep-student-info">
+          <div class="ep-student-name"></div>
+          <div class="ep-student-id"></div>
+        </div>
+        <span class="ep-status-pill status-badge pending"></span>
+        <div class="ep-actions-row">
+          <button class="ep-expand" title="Expand" onclick="toggleExpandPaper()">
+            <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <button class="ep-close" title="Close" onclick="closeExamPaper()">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total strip -->
+    <div class="ep-total-strip">
+      <div class="ep-exam-label"></div>
+      <span class="ep-total-val" id="epTotalDisplay">— / —</span>
+      <button class="ep-save-btn" onclick="saveExamPaperChanges()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Save Changes
+      </button>
+    </div>
+
+    <!-- Question cards injected here by openExamPaper() -->
+    <div class="ep-body"></div>
+
+  </div>
+</div>
+
+</body>
+</html>

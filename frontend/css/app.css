@@ -1,0 +1,112 @@
+/* =========================================================
+   TAQDEER — App / Page-specific CSS
+   (Works with global style.css tokens + Poppins)
+   ========================================================= */
+
+.hidden { display: none !important; }
+.w-full { width: 100%; }
+.text-center { text-align: center; }
+
+/* Toast / notification container */
+.toast-container {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  gap: 10px;
+  z-index: 9998;
+}
+
+/* =========================================================
+   LANDING PAGE
+   ========================================================= */
+.landing-nav {
+  width: min(1120px, calc(100% - 32px));
+  margin: 18px auto 0;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.landing-brand {
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: var(--text-strong);
+  font-size: 20px;
+}
+.landing-brand span {
+  color: var(--c-arctic);
+}
+
+.hero { margin-top: var(--space-5); }
+
+/* Features grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+@media (max-width: 1000px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .features-grid { grid-template-columns: 1fr; }
+}
+
+/* Stat / feature icon */
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(104, 149, 188, 0.18);
+  border: 1px solid rgba(152, 185, 212, 0.50);
+  margin-bottom: 10px;
+}
+
+/* How-it-works steps */
+.steps-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+@media (max-width: 980px) {
+  .steps-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .steps-row { grid-template-columns: 1fr; }
+}
+
+.step-item {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 4px 16px rgba(40, 64, 91, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.step-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text-inv);
+  background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(68, 107, 149, 0.32);
+}
+
+.landing-footer {
+  padding: 16px 0 26px;
+}

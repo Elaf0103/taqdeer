@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Exam Paper Review</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js"></script>
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid !important; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    /* ── Topbar ──────────────────────────────────────────────────────────────── */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; margin-bottom: 24px; border-radius: var(--radius-lg); }
+    .sidebar-toggle { display: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.22); place-items: center; cursor: pointer; }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .user-chip { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 999px; background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border); font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer; transition: background var(--t); text-decoration: none; }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800; }
+
+    /* ── Logout modal ─────────────────────────────────────────────────────────── */
+    .logout-overlay { position: fixed; inset: 0; background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all .25s; z-index: 300; }
+    .logout-overlay.active { opacity: 1; visibility: visible; }
+    .logout-modal { background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px; text-align: center; width: 400px; max-width: 92%; box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s; }
+    .logout-overlay.active .logout-modal { transform: scale(1); }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-logout-cancel { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-logout-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-logout-confirm { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* ── Unlock modal ────────────────────────────────────────────────────────── */
+    .unlock-overlay { position: fixed; inset: 0; background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all .25s; z-index: 300; }
+    .unlock-overlay.active { opacity: 1; visibility: visible; }
+    .unlock-modal { background: rgba(255,255,255,.97); padding: 34px 30px 30px; border-radius: 20px; text-align: center; width: 420px; max-width: 92%; box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s; }
+    .unlock-overlay.active .unlock-modal { transform: scale(1); }
+    .unlock-icon-ring { width: 56px; height: 56px; border-radius: 14px; background: rgba(68,107,149,.1); display: grid; place-items: center; margin: 0 auto 16px; }
+    .unlock-icon-ring svg { width: 24px; height: 24px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .unlock-modal h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; color: var(--text-strong); }
+    .unlock-modal p  { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+    .unlock-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-unlock-cancel  { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-unlock-cancel:hover  { background: rgba(255,255,255,.75); }
+    .btn-unlock-confirm { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn-unlock-confirm:hover { opacity: .88; }
+
+    /* ── Toast ────────────────────────────────────────────────────────────────── */
+    .toast { position: fixed; bottom: 26px; right: 26px; z-index: 9998; display: flex; align-items: center; gap: 10px; padding: 13px 20px; border-radius: 14px; font-size: 13px; font-weight: 600; color: #fff; box-shadow: 0 10px 32px rgba(0,0,0,.2); transform: translateY(90px); opacity: 0; transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast.info    { background: linear-gradient(135deg,var(--c-ice),var(--c-arctic)); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ════════════════════════════════════════════════════════════
+       PAGE-SPECIFIC STYLES — EXAM REVIEW
+    ════════════════════════════════════════════════════════════ */
+
+    /* Back button */
+    .er-back-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,0.8);
+      background: rgba(255,255,255,0.35);
+      color: var(--text-strong); font-size: 13px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .er-back-btn:hover { background: rgba(255,255,255,0.75); transform: translateX(-2px); }
+    .er-back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Page header */
+    .er-page-header { margin-bottom: 22px; }
+    .er-page-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 800; color: var(--text-strong); }
+    .er-page-header p  { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* Card shell */
+    .er-card { border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; }
+    .er-card-head { padding: 18px 22px 16px; border-bottom: 1px solid rgba(208,223,235,.45); display: flex; align-items: center; gap: 12px; }
+    .er-card-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, rgba(104,149,188,0.18), rgba(68,107,149,0.12)); display: grid; place-items: center; flex-shrink: 0; }
+    .er-card-icon svg { width: 16px; height: 16px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .er-card-title { font-size: 14px; font-weight: 700; color: var(--text-strong); }
+    .er-card-body { padding: 20px 22px; }
+
+    /* Exam info grid */
+    .er-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .er-info-item { display: flex; flex-direction: column; gap: 3px; }
+    .er-info-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); }
+    .er-info-value { font-size: 14px; font-weight: 600; color: var(--text-strong); }
+
+    /* Student strip */
+    .er-student-strip {
+      display: flex; align-items: center; gap: 16px;
+      padding: 18px 22px;
+      border-top: 1px solid rgba(208,223,235,0.4);
+    }
+    .er-avatar {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: grid; place-items: center;
+      color: #fff; font-size: 15px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .er-student-info { flex: 1; min-width: 0; }
+    .er-student-name { font-size: 17px; font-weight: 800; color: var(--text-strong); }
+    .er-student-id { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .er-student-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+    .er-total-score { text-align: right; }
+    .er-total-val { font-size: 26px; font-weight: 900; color: var(--text-strong); line-height: 1; }
+    .er-total-max { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    /* Status badge */
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+    .status-badge.approved { background: rgba(52,211,153,0.14); color: #059669; border: 1px solid rgba(52,211,153,0.35); }
+    .status-badge.pending  { background: rgba(251,191,36,0.14); color: #d97706; border: 1px solid rgba(251,191,36,0.35); }
+    .status-badge.unlocked { background: rgba(245,158,11,0.14); color: #b45309; border: 1px solid rgba(245,158,11,0.35); }
+    .status-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Approved-lock banner ────────────────────────────────────────────────── */
+    .er-lock-banner {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 22px; border-radius: var(--radius-lg);
+      background: rgba(16,185,129,0.07);
+      border: 1px solid rgba(16,185,129,0.28);
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .er-lock-icon {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(16,185,129,0.14); display: grid; place-items: center;
+    }
+    .er-lock-icon svg { width: 18px; height: 18px; stroke: #059669; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .er-lock-text { flex: 1; min-width: 0; }
+    .er-lock-text strong { font-size: 13px; font-weight: 700; color: #065f46; display: block; }
+    .er-lock-text span   { font-size: 12px; color: var(--text-muted); }
+    .er-unlock-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 16px; border-radius: 9px; border: none;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s, transform .1s;
+      white-space: nowrap; flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(217,119,6,0.28);
+    }
+    .er-unlock-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .er-unlock-btn svg { width: 13px; height: 13px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Lock overlay on score inputs */
+    .er-score-input:disabled {
+      opacity: 0.55; cursor: not-allowed;
+      background: rgba(208,223,235,0.25);
+    }
+
+    /* Question card */
+    .er-question {
+      border-radius: 16px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(208,223,235,0.6);
+      /* No overflow:hidden — would clip the edited-indicator tooltip */
+      margin-bottom: 18px;
+      transition: box-shadow 0.2s;
+    }
+    .er-question:hover { box-shadow: 0 4px 20px rgba(68,107,149,0.10); }
+
+    .er-q-header {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 20px 14px;
+      background: rgba(208,223,235,0.13);
+      border-bottom: 1px solid rgba(208,223,235,0.4);
+      /* Clip own background to the card's top rounded corners */
+      border-radius: 16px 16px 0 0;
+    }
+    .er-q-num-badge {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      color: #fff; font-size: 13px; font-weight: 800;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .er-q-text {
+      font-size: 14px; font-weight: 600; color: var(--text-strong);
+      line-height: 1.55; flex: 1;
+    }
+    .er-q-pts-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px;
+      background: rgba(104,149,188,0.12);
+      font-size: 11px; font-weight: 700; color: var(--c-arctic);
+      flex-shrink: 0; margin-top: 3px;
+    }
+
+    .er-q-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* Answer block */
+    .er-block { border-radius: 12px; overflow: visible; border: 1px solid rgba(208,223,235,0.45); }
+    .er-block-header {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 14px 8px;
+      background: rgba(240,246,252,0.7);
+      border-bottom: 1px solid rgba(208,223,235,0.35);
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.09em; color: var(--text-muted);
+      border-radius: 12px 12px 0 0;
+    }
+    .er-block-header svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .er-block-body { padding: 12px 16px; background: rgba(255,255,255,0.55); border-radius: 0 0 12px 12px; }
+    .er-answer-text { font-size: 13.5px; color: var(--text); line-height: 1.65; }
+    .er-reasoning-text { font-size: 13px; color: var(--text-muted); line-height: 1.65; font-style: italic; }
+    .er-reasoning-text.collapsed { max-height: 4.9em; overflow: hidden; }
+    .er-toggle-btn {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 6px;
+      background: none; border: none; cursor: pointer; padding: 0;
+      font-size: 11.5px; font-weight: 700; color: var(--c-arctic);
+      font-family: inherit; letter-spacing: 0.02em;
+    }
+    .er-toggle-btn:hover { text-decoration: underline; }
+
+    /* AI reasoning block — slightly distinct */
+    .er-block.reasoning { border-color: rgba(104,149,188,0.25); }
+    .er-block.reasoning .er-block-header { background: rgba(104,149,188,0.08); color: var(--c-arctic); }
+    .er-block.reasoning .er-block-body { background: rgba(248,252,255,0.7); }
+
+    /* Score row — everything right-aligned, indicator sits next to the score */
+    .er-score-row {
+      display: flex; align-items: center; justify-content: flex-end;
+      flex-wrap: wrap; gap: 8px; padding-top: 10px;
+    }
+    .er-score-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-right: 2px; }
+    .er-score-input {
+      width: 60px; text-align: center; padding: 7px 8px;
+      border-radius: 10px; border: 1.5px solid rgba(152,185,212,0.7);
+      background: rgba(255,255,255,0.9); font-size: 16px; font-weight: 800;
+      color: var(--text-strong); outline: none; font-family: inherit;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .er-score-input:focus { border-color: var(--c-arctic); box-shadow: 0 0 0 3px rgba(68,107,149,0.12); }
+    .er-score-max { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    .er-score-pct {
+      font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    }
+    .er-score-pct.high   { background: rgba(52,211,153,0.14); color: #059669; }
+    .er-score-pct.mid    { background: rgba(251,191,36,0.14); color: #d97706; }
+    .er-score-pct.low    { background: rgba(248,113,113,0.14); color: #dc2626; }
+
+    /* Edited indicator — visible badge sitting right next to the score */
+    .er-edited {
+      position: relative; display: inline-flex; align-items: center;
+      gap: 5px; padding: 4px 10px 4px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(68,107,149,0.35);
+      background: rgba(68,107,149,0.09);
+      cursor: default;
+      transition: background 0.15s;
+    }
+    .er-edited:hover { background: rgba(68,107,149,0.16); }
+    .er-edited-icon { display: inline-flex; align-items: center; color: var(--c-arctic); }
+    .er-edited-icon svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .er-edited-label { font-size: 11px; font-weight: 700; color: var(--c-arctic); }
+
+    /* Tooltip rendered as a fixed-position card via JS — avoids all scroll/overflow clipping */
+    .er-edited-tooltip {
+      display: none;
+      position: fixed;
+      min-width: 210px;
+      background: #fff;
+      border: 1px solid rgba(208,223,235,0.9);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 8px 32px rgba(0,20,40,0.18);
+      z-index: 9000;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .er-edited:hover .er-edited-tooltip { display: block; }
+    .er-tooltip-row { font-size: 12px; color: var(--text-muted); line-height: 1.85; }
+    .er-tooltip-row strong { color: var(--text-strong); font-weight: 700; }
+    .er-tooltip-divider { height: 1px; background: rgba(208,223,235,0.5); margin: 6px 0; }
+
+    /* Sticky save bar */
+    .er-save-bar {
+      position: sticky; bottom: 0; z-index: 50;
+      display: none; align-items: center; gap: 14px;
+      padding: 14px 22px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(208,223,235,0.5);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      box-shadow: 0 -4px 20px rgba(68,107,149,0.10);
+      margin-top: 4px;
+    }
+    .er-save-bar.visible { display: flex; }
+    .er-save-notice { flex: 1; font-size: 12px; color: var(--text-muted); }
+    .er-save-notice strong { color: var(--text-strong); }
+    .er-save-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(68,107,149,0.30);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .er-save-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .er-save-btn svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .er-discard-btn {
+      padding: 10px 16px; border-radius: 11px;
+      border: 1.5px solid rgba(208,223,235,0.8);
+      background: rgba(255,255,255,0.4); color: var(--text);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .er-discard-btn:hover { background: rgba(255,255,255,0.75); }
+
+    /* Empty state */
+    .er-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .er-empty svg { width: 48px; height: 48px; stroke: var(--c-powder); fill: none; stroke-width: 1.5; margin-bottom: 12px; }
+    .er-empty p { font-size: 14px; }
+
+    /* ── Export action bar ────────────────────────────────────────────────────── */
+    .er-export-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 14px 22px; border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.52); border: 1px solid rgba(208,223,235,0.55);
+      margin-bottom: 20px;
+    }
+    .er-export-label {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0;
+    }
+    .er-export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .er-export-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 9px;
+      border: 1.5px solid rgba(208,223,235,.85);
+      background: rgba(255,255,255,.6);
+      color: var(--text-strong); font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .er-export-btn:hover { background: rgba(255,255,255,.92); border-color: rgba(104,149,188,.45); }
+    .er-export-btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
+    .er-export-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .er-export-btn.pdf-btn   { border-color: rgba(239,68,68,.3);   color: #b91c1c; }
+    .er-export-btn.pdf-btn:hover   { background: rgba(239,68,68,.06);  border-color: rgba(239,68,68,.5); }
+    .er-export-btn.excel-btn { border-color: rgba(16,185,129,.3);  color: #065f46; }
+    .er-export-btn.excel-btn:hover { background: rgba(16,185,129,.06); border-color: rgba(16,185,129,.5); }
+    .er-export-btn.csv-btn   { border-color: rgba(68,107,149,.3);  color: var(--c-arctic); }
+    .er-export-btn.csv-btn:hover   { background: rgba(68,107,149,.06);  border-color: rgba(68,107,149,.5); }
+  </style>
+</head>
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html" class="active">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══════════════════════════════════════════════════════════════════ -->
+  <main id="mainContent">
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 style="margin:0;font-size:20px;">Exam Paper Review</h2>
+          <div class="bc" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Dashboard &rsaquo; Results Review &rsaquo; Exam Paper</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a href="./results-reviews.html" class="er-back-btn">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back to Results
+        </a>
+        <a href="./profile.html" class="user-chip">
+          <div class="chip-av" id="chipAvatar">?</div>
+          <span id="chipName">Instructor</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Page content injected by JS -->
+    <div id="erRoot"></div>
+
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══ LOGOUT MODAL ══════════════════════════════════════════════════════════ -->
+<div class="logout-overlay" id="logoutOverlay">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Log out?</h3>
+    <p>You will be returned to the login screen.</p>
+    <div class="logout-actions">
+      <button class="btn-logout-cancel" id="logoutCancel">Cancel</button>
+      <button class="btn-logout-confirm" id="logoutConfirm">Log out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ UNLOCK GRADE MODAL ════════════════════════════════════════════════════ -->
+<div class="unlock-overlay" id="unlockOverlay">
+  <div class="unlock-modal">
+    <div class="unlock-icon-ring">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+    </div>
+    <h3>Unlock Approved Grade?</h3>
+    <p>This grade has already been approved. Unlocking it will allow manual edits and require re-approval before the final grade is saved.</p>
+    <div class="unlock-actions">
+      <button class="btn-unlock-cancel" id="unlockCancel" type="button">Cancel</button>
+      <button class="btn-unlock-confirm" id="unlockConfirm" type="button">Unlock Grade</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ═══════════════════════════════════════════════════════════════════ -->
+<div class="toast" id="toast">
+  <svg id="toastIcon" viewBox="0 0 24 24"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+  authGuard();
+
+  /* ── Sidebar toggle ─────────────────────────────────────────────────────── */
+  const sidebar  = document.getElementById('sidebar');
+  const sOverlay = document.getElementById('sidebarOverlay');
+  const toggler  = document.getElementById('sidebarToggle');
+  toggler.addEventListener('click', () => {
+    sidebar.classList.toggle('mobile-open');
+    sOverlay.classList.toggle('open');
+  });
+  sOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    sOverlay.classList.remove('open');
+  });
+
+  /* ── Logout modal ───────────────────────────────────────────────────────── */
+  const logoutOverlay = document.getElementById('logoutOverlay');
+  document.getElementById('logoutTrigger').addEventListener('click', e => {
+    e.preventDefault();
+    logoutOverlay.classList.add('active');
+  });
+  document.getElementById('logoutCancel').addEventListener('click', () => logoutOverlay.classList.remove('active'));
+  document.getElementById('logoutConfirm').addEventListener('click', () => { doLogout(); });
+
+  /* ── Reasoning Show more/less toggle ────────────────────────────────────── */
+  function toggleReasoning(btn) {
+    const el = btn.previousElementSibling;
+    const collapsed = el.classList.toggle('collapsed');
+    btn.textContent = collapsed ? 'Show more' : 'Show less';
+  }
+
+  /* After rendering questions, hide toggle buttons where text fits fully */
+  function _initReasoningToggles() {
+    document.querySelectorAll('[data-reasoning-el]').forEach(el => {
+      const btn = el.nextElementSibling;
+      if (!btn) return;
+      // If content height ≤ collapsed max-height, no toggle needed
+      el.classList.add('collapsed');
+      const needsToggle = el.scrollHeight > el.clientHeight + 2;
+      if (!needsToggle) {
+        el.classList.remove('collapsed');
+        btn.style.display = 'none';
+      }
+    });
+  }
+
+  /* ── Toast ──────────────────────────────────────────────────────────────── */
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    t.className = 'toast ' + type;
+    if (type === 'success') icon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+    else if (type === 'info') icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    else icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    document.getElementById('toastMsg').textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  /* ── Avatar helpers ─────────────────────────────────────────────────────── */
+  const AVATAR_COLORS = [
+    '#446B95','#28405B','#6895BC','#2D7DD2','#3A5A8C',
+    '#1B6CA8','#2E86AB','#3D5A80','#56789A','#3C6478'
+  ];
+  function avatarColor(id) {
+    let h = 0;
+    const s = String(id);
+    for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i);
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+  }
+  function avatarInitials(name) {
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  /* ── Page state (set by initPage, consumed by renderPage + saveChanges) ─── */
+  let STATE = null;
+  const root = document.getElementById('erRoot');
+
+  /* ── Init: resolve result_id then fetch all data from backend ────────────── */
+  async function initPage() {
+    // results-reviews.html writes examId + studentId to localStorage when navigating here.
+    // We use those only as a lookup key — no other data from localStorage is trusted.
+    let navCtx = null;
+    try { navCtx = JSON.parse(localStorage.getItem('exam-review-context')); } catch (e) {}
+
+    if (!navCtx || !navCtx.examId || !navCtx.studentId) {
+      root.innerHTML = `
+        <div class="er-empty">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p>No exam review data found. <a href="./results-reviews.html" style="color:var(--c-arctic);font-weight:600;">Go back to Results Review</a></p>
+        </div>`;
+      return;
+    }
+
+    const { examId, studentId, from } = navCtx;
+    const fromArchive = from === 'archive';
+
+    // Update only the dedicated back button — never touch the sidebar nav link.
+    const backBtn = document.querySelector('.er-back-btn');
+    if (backBtn) {
+      if (fromArchive) {
+        backBtn.href = './exam-results.html?exam=' + examId + '&from=archive';
+        backBtn.innerHTML =
+          '<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Back to Archive Results';
+      } else {
+        backBtn.href = './results-reviews.html?examId=' + examId;
+      }
+    }
+
+    root.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:14px;">Loading paper…</div>`;
+
+    try {
+      // Fetch results list + exam metadata in parallel
+      const [results, exam] = await Promise.all([
+        apiFetch('/results/?exam_id=' + examId),
+        apiFetch('/exams/' + examId),
+      ]);
+
+      const result = results.find(r => String(r.studentId) === String(studentId));
+      if (!result) {
+        const errBackUrl = fromArchive
+          ? `./exam-results.html?exam=${examId}&from=archive`
+          : `./results-reviews.html`;
+        const errBackLabel = fromArchive ? 'Go back to Archive Results' : 'Go back to Results Review';
+        root.innerHTML = `
+          <div class="er-empty">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>Student result not found. <a href="${errBackUrl}" style="color:var(--c-arctic);font-weight:600;">${errBackLabel}</a></p>
+          </div>`;
+        return;
+      }
+
+      // Now fetch per-question scores using the resolved backend result ID
+      const qScores = await apiFetch('/results/' + result.id + '/question-scores');
+
+      STATE = {
+        resultId:      result.id,
+        examId,
+        examName:      exam.name,
+        dept:          exam.dept,
+        examType:      exam.type,
+        examSection:   exam.section,
+        examDate:      exam.date ? String(exam.date) : '',
+        examSemester:  '',
+        totalMarks:    exam.totalMarks,
+        studentId:     result.studentId,
+        studentName:   result.studentName,
+        studentStatus: result.status,
+        questions:     qScores.map(qs => ({
+          id:            qs.id,
+          text:          qs.questionText,
+          answer:        qs.studentAnswer  || '(No answer recorded)',
+          reasoning:     qs.aiReasoning    || '(No AI reasoning available)',
+          maxPts:        qs.maxScore,
+          score:         qs.score,
+          originalScore: qs.originalScore,
+        })),
+      };
+
+      renderPage();
+    } catch (err) {
+      const errBackUrl = fromArchive
+        ? `./exam-results.html?exam=${examId}&from=archive`
+        : `./results-reviews.html`;
+      const errBackLabel = fromArchive ? 'Go back to Archive Results' : 'Go back to Results Review';
+      root.innerHTML = `
+        <div class="er-empty">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p>Failed to load exam data. <a href="${errBackUrl}" style="color:var(--c-arctic);font-weight:600;">${errBackLabel}</a></p>
+        </div>`;
+      showToast(err.message, 'error');
+    }
+  }
+
+  initPage();
+
+  /* ── Render full page ───────────────────────────────────────────────────── */
+  function renderPage() {
+    const ctx = STATE;
+    const totalMarks = ctx.totalMarks;
+    const isApproved = ctx.studentStatus === 'approved';
+
+    // Compute current total from scores
+    let currentScores = ctx.questions.map(q => q.score);
+    let currentTotal  = currentScores.reduce((a, b) => a + b, 0);
+
+    // Build metadata rows
+    const infoItems = [
+      { label: 'Exam Name',  value: ctx.examName     || '—' },
+      { label: 'Subject',    value: ctx.dept          || '—' },
+      { label: 'Type',       value: ctx.examType      || '—' },
+      { label: 'Section',    value: ctx.examSection   || '—' },
+      { label: 'Date',       value: ctx.examDate      || '—' },
+      { label: 'Semester',   value: ctx.examSemester  || '—' },
+    ].filter(i => i.value && i.value !== '—' || true);  // always show grid
+
+    const infoHTML = infoItems.map(i => `
+      <div class="er-info-item">
+        <span class="er-info-label">${i.label}</span>
+        <span class="er-info-value">${i.value}</span>
+      </div>`).join('');
+
+    // Student avatar + status
+    const aColor      = avatarColor(ctx.studentId);
+    const initials    = avatarInitials(ctx.studentName);
+    const statusCls   = ctx.studentStatus === 'approved' ? 'approved' : 'pending';
+    const statusLabel = ctx.studentStatus === 'approved' ? 'Approved' : 'Pending Review';
+    const statusSvg   = ctx.studentStatus === 'approved'
+      ? '<polyline points="20 6 9 17 4 12"/>'
+      : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+
+    // Question cards
+    const qCards = ctx.questions.map((q, i) => {
+      const pct = q.maxPts > 0 ? q.score / q.maxPts : 0;
+      const pctClass = pct >= 0.8 ? 'high' : pct >= 0.5 ? 'mid' : 'low';
+      const pctLabel = Math.round(pct * 100) + '%';
+      const isEdited = q.score !== q.originalScore;
+
+      const editedHTML = isEdited ? `
+        <span class="er-edited">
+          <span class="er-edited-icon">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </span>
+          <span class="er-edited-label">Edited</span>
+          <div class="er-edited-tooltip">
+            <div class="er-tooltip-row">Original score: <strong>${q.originalScore} / ${q.maxPts}</strong></div>
+            <div class="er-tooltip-row updated-row">Updated score: <strong>${q.score} / ${q.maxPts}</strong></div>
+            <div class="er-tooltip-divider"></div>
+            <div class="er-tooltip-row" style="font-style:italic;font-size:11px;color:var(--text-muted);">Manually adjusted</div>
+          </div>
+        </span>` : '';
+
+      return `
+        <div class="er-question" data-q-idx="${i}">
+          <div class="er-q-header">
+            <div class="er-q-num-badge">${i + 1}</div>
+            <div class="er-q-text">${q.text}</div>
+            <div class="er-q-pts-badge">${q.maxPts} pts</div>
+          </div>
+          <div class="er-q-body">
+            <div class="er-block">
+              <div class="er-block-header">
+                <svg viewBox="0 0 24 24"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
+                Student Answer
+              </div>
+              <div class="er-block-body">
+                <div class="er-answer-text">${q.answer}</div>
+              </div>
+            </div>
+            <div class="er-block reasoning">
+              <div class="er-block-header">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                AI Reasoning
+              </div>
+              <div class="er-block-body">
+                <div class="er-reasoning-text collapsed" data-reasoning-el>${q.reasoning}</div>
+                <button class="er-toggle-btn" data-toggle-reasoning onclick="toggleReasoning(this)">Show more</button>
+              </div>
+            </div>
+            <div class="er-score-row">
+              <span class="er-score-label">Score</span>
+              <input class="er-score-input" type="number" min="0" max="${q.maxPts}"
+                value="${q.score}" data-max="${q.maxPts}" data-q-idx="${i}"
+                data-score-id="${q.id}"
+                data-original="${q.score}"
+                data-session-original="${q.originalScore}"
+                ${isApproved ? 'disabled' : ''}>
+              <span class="er-score-max">/ ${q.maxPts} pts</span>
+              <span class="er-score-pct ${pctClass}" data-pct-idx="${i}">${pctLabel}</span>
+              ${editedHTML}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    root.innerHTML = `
+      <!-- Exam + Student info card -->
+      <div class="er-card glass er-page-header" style="margin-bottom:20px;">
+        <div class="er-card-head">
+          <div class="er-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <span class="er-card-title">Exam Information</span>
+        </div>
+        <div class="er-card-body" style="padding-bottom:0;">
+          <div class="er-info-grid">${infoHTML}</div>
+        </div>
+        <div class="er-student-strip">
+          <div class="er-avatar" style="background:${aColor}">${initials}</div>
+          <div class="er-student-info">
+            <div class="er-student-name">${ctx.studentName}</div>
+            <div class="er-student-id">${ctx.studentId}</div>
+          </div>
+          <div class="er-student-right">
+            <span class="status-badge ${statusCls}">
+              <svg viewBox="0 0 24 24">${statusSvg}</svg>
+              ${statusLabel}
+            </span>
+            <div class="er-total-score">
+              <div class="er-total-val" id="erTotalVal">${currentTotal}</div>
+              <div class="er-total-max">/ ${totalMarks} pts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${isApproved ? `
+      <!-- Lock banner — shown immediately after Exam Information card -->
+      <div class="er-lock-banner" id="erLockBanner">
+        <div class="er-lock-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="er-lock-text">
+          <strong>Approved grade \u2014 locked for editing</strong>
+          <span>This grade has been approved. Unlock it to allow manual changes.</span>
+        </div>
+        <button class="er-unlock-btn" id="erUnlockBtn">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+          Unlock for Editing
+        </button>
+      </div>
+      ` : ''}
+
+      <!-- Export action bar -->
+      <div class="er-export-bar">
+        <span class="er-export-label">Export Paper</span>
+        <div class="er-export-btns">
+          <button class="er-export-btn pdf-btn" id="erExportPdf">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            PDF
+          </button>
+          <button class="er-export-btn excel-btn" id="erExportExcel">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Excel
+          </button>
+          <button class="er-export-btn csv-btn" id="erExportCsv">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+            CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Question cards -->
+      <div id="erQuestions">${qCards}</div>
+
+      ${isApproved ? `` : `
+      <!-- Save bar -->
+      <div class="er-save-bar" id="erSaveBar">
+        <div class="er-save-notice">
+          <strong id="erChangeCount">0 question(s)</strong> have been modified. Save to update the student's grade.
+        </div>
+        <button class="er-discard-btn" id="erDiscardBtn">Discard</button>
+        <button class="er-save-btn" id="erSaveBtn">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Changes
+        </button>
+      </div>
+      `}
+    `;
+
+    wireInputs();
+    _initReasoningToggles();
+    _wireExportButtons();
+  }
+
+  /* ── Reviewed export helpers ─────────────────────────────────────────────── */
+  async function _downloadReviewedExport(format) {
+    if (!STATE) return;
+    const btn = document.getElementById(
+      format === 'pdf' ? 'erExportPdf' : format === 'excel' ? 'erExportExcel' : 'erExportCsv'
+    );
+    const origText = btn ? btn.innerText.trim() : format.toUpperCase();
+    if (btn) { btn.disabled = true; btn.textContent = 'Exporting\u2026'; }
+    try {
+      const path = `/reviewed-export/${STATE.resultId}/export/${format}`;
+      const res  = await fetch(API_BASE + path, {
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('taqdeer_token') || '') },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+      const blob        = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match       = disposition.match(/filename="?([^"]+)"?/);
+      const filename    = match ? match[1] : `reviewed.${format === 'excel' ? 'xlsx' : format}`;
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      showToast('Export downloaded.', 'success');
+    } catch (err) {
+      showToast('Export failed: ' + err.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+    }
+  }
+
+  function _wireExportButtons() {
+    const pdfBtn   = document.getElementById('erExportPdf');
+    const excelBtn = document.getElementById('erExportExcel');
+    const csvBtn   = document.getElementById('erExportCsv');
+    if (pdfBtn)   pdfBtn.addEventListener('click',   () => _downloadReviewedExport('pdf'));
+    if (excelBtn) excelBtn.addEventListener('click', () => _downloadReviewedExport('excel'));
+    if (csvBtn)   csvBtn.addEventListener('click',   () => _downloadReviewedExport('csv'));
+  }
+
+  /* ── Unlock an approved result ──────────────────────────────────────────── */
+  const _unlockOverlay = document.getElementById('unlockOverlay');
+  document.getElementById('unlockCancel').addEventListener('click', () => {
+    _unlockOverlay.classList.remove('active');
+  });
+  _unlockOverlay.addEventListener('click', e => {
+    if (e.target === _unlockOverlay) _unlockOverlay.classList.remove('active');
+  });
+
+  async function _doUnlock() {
+    _unlockOverlay.classList.remove('active');
+    const btn = document.getElementById('erUnlockBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Unlocking\u2026'; }
+    try {
+      await apiFetch('/results/' + STATE.resultId + '/unapprove', { method: 'POST' });
+      STATE.studentStatus = 'pending_review';
+      renderPage();
+      showToast('Grade unlocked \u2014 changes require re-approval.', 'info');
+    } catch (err) {
+      showToast('Unlock failed: ' + err.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Unlock for Editing'; }
+    }
+  }
+  document.getElementById('unlockConfirm').addEventListener('click', _doUnlock);
+
+  function unlockForEditing() {
+    _unlockOverlay.classList.add('active');
+  }
+
+  /* ── Wire score inputs ──────────────────────────────────────────────────── */
+  function wireInputs() {
+    // If grade is approved/locked, only wire the unlock button and return
+    const unlockBtn = document.getElementById('erUnlockBtn');
+    if (unlockBtn) {
+      unlockBtn.addEventListener('click', unlockForEditing);
+      return;
+    }
+
+    const saveBar     = document.getElementById('erSaveBar');
+    const changeCount = document.getElementById('erChangeCount');
+    const totalValEl  = document.getElementById('erTotalVal');
+
+    // Position tooltips at fixed coordinates so they escape all scroll/overflow containers
+    document.addEventListener('mousemove', e => {
+      const tip = e.target.closest('.er-edited');
+      if (!tip) return;
+      const tooltip = tip.querySelector('.er-edited-tooltip');
+      if (!tooltip) return;
+      const rect = tip.getBoundingClientRect();
+      tooltip.style.top  = (rect.top - tooltip.offsetHeight - 10) + 'px';
+      tooltip.style.left = Math.max(8, rect.right - tooltip.offsetWidth) + 'px';
+    });
+
+    document.querySelectorAll('.er-score-input').forEach(input => {
+      // Finalize empty field on blur (snap to 0 or clamp if needed)
+      input.addEventListener('blur', () => {
+        const max = parseInt(input.dataset.max);
+        if (input.value === '') {
+          input.value = 0;
+          input.dispatchEvent(new Event('input'));
+        } else {
+          const clamped = Math.max(0, Math.min(parseInt(input.value) || 0, max));
+          if (clamped !== (parseInt(input.value) || 0)) {
+            input.value = clamped;
+            input.dispatchEvent(new Event('input'));
+          }
+        }
+      });
+
+      input.addEventListener('input', () => {
+        const max = parseInt(input.dataset.max);
+        // Compute clamped value for UI updates — never write back to input.value here.
+        // Writing input.value mid-keystroke resets the browser cursor state and swallows typed chars.
+        // The blur handler handles all final clamping.
+        const val = Math.max(0, Math.min(parseInt(input.value) || 0, max));
+
+        const qIdx        = parseInt(input.dataset.qIdx);
+        const sessionOrig = parseInt(input.dataset.sessionOriginal); // never changes
+        const lastSaved   = parseInt(input.dataset.original);        // updates after each save
+
+        // Update percentage badge
+        const pct   = max > 0 ? val / max : 0;
+        const pctEl = document.querySelector(`[data-pct-idx="${qIdx}"]`);
+        if (pctEl) {
+          pctEl.textContent = Math.round(pct * 100) + '%';
+          pctEl.className   = 'er-score-pct ' + (pct >= 0.8 ? 'high' : pct >= 0.5 ? 'mid' : 'low');
+        }
+
+        // Edited indicator — compares against session-start original (persists through saves)
+        const scoreRow  = input.closest('.er-score-row');
+        let editedSpan  = scoreRow.querySelector('.er-edited');
+        if (val !== sessionOrig) {
+          if (!editedSpan) {
+            editedSpan = document.createElement('span');
+            editedSpan.className = 'er-edited';
+            editedSpan.innerHTML = `
+              <span class="er-edited-icon">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </span>
+              <span class="er-edited-label">Edited</span>
+              <div class="er-edited-tooltip">
+                <div class="er-tooltip-row">Original score: <strong>${sessionOrig} / ${max}</strong></div>
+                <div class="er-tooltip-row updated-row">Updated score: <strong>${val} / ${max}</strong></div>
+                <div class="er-tooltip-divider"></div>
+                <div class="er-tooltip-row" style="font-style:italic;font-size:11px;color:var(--text-muted);">Manually adjusted</div>
+              </div>`;
+            scoreRow.appendChild(editedSpan);
+          } else {
+            editedSpan.querySelector('.updated-row').innerHTML = `Updated score: <strong>${val} / ${max}</strong>`;
+          }
+        } else if (editedSpan) {
+          editedSpan.remove();
+        }
+
+        // Recompute total
+        const newTotal = [...document.querySelectorAll('.er-score-input')]
+          .reduce((sum, el) => sum + (parseInt(el.value) || 0), 0);
+        totalValEl.textContent = newTotal;
+
+        // Save bar — compares against last-saved baseline (not session original)
+        const unsaved = [...document.querySelectorAll('.er-score-input')]
+          .filter(el => (parseInt(el.value) || 0) !== parseInt(el.dataset.original));
+        if (unsaved.length > 0) {
+          saveBar.classList.add('visible');
+          changeCount.textContent = unsaved.length + ' question' + (unsaved.length !== 1 ? 's' : '');
+        } else {
+          saveBar.classList.remove('visible');
+        }
+      });
+    });
+
+    // Discard — revert inputs to last-saved values (not session originals)
+    document.getElementById('erDiscardBtn').addEventListener('click', () => {
+      document.querySelectorAll('.er-score-input').forEach(input => {
+        input.value = input.dataset.original;
+        input.dispatchEvent(new Event('input'));
+      });
+    });
+
+    // Save button
+    document.getElementById('erSaveBtn').addEventListener('click', saveChanges);
+  }
+
+  /* ── Save scores to backend ─────────────────────────────────────────────── */
+  async function saveChanges() {
+    const ctx = STATE;
+    const inputs = [...document.querySelectorAll('.er-score-input')];
+    const changed = inputs.filter(el => (parseInt(el.value) || 0) !== parseInt(el.dataset.original));
+
+    if (changed.length === 0) return;
+
+    const saveBtn = document.getElementById('erSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '0.6';
+
+    try {
+      // PUT each changed question score to the backend in parallel;
+      // the backend recomputes ExamResult.total_score atomically per request.
+      await Promise.all(changed.map(el =>
+        apiFetch('/results/' + ctx.resultId + '/question-scores/' + el.dataset.scoreId, {
+          method: 'PUT',
+          body: JSON.stringify({ score: parseInt(el.value) || 0 }),
+        })
+      ));
+
+      // Re-fetch the updated result for the authoritative total + letter grade
+      const updated = await apiFetch('/results/' + ctx.resultId);
+
+      // Update the displayed total score
+      document.getElementById('erTotalVal').textContent = parseFloat(updated.totalScore);
+
+      // Advance the last-saved baseline (data-original) — do NOT touch data-session-original
+      inputs.forEach(el => { el.dataset.original = parseInt(el.value) || 0; });
+
+      // Keep edited indicators — they reflect the session-start original and persist through saves.
+      // The save bar disappears because data-original now matches the input values.
+      document.getElementById('erSaveBar').classList.remove('visible');
+
+      showToast('Scores saved — grade updated to ' + updated.grade, 'success');
+    } catch (err) {
+      showToast('Save failed: ' + err.message, 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = '';
+    }
+  }
+
+  /* ── Load profile chip ───────────────────────────────────────────────────── */
+  (function() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    if (p) {
+      const av      = document.getElementById('chipAvatar');
+      const nm      = document.getElementById('chipName');
+      const _parts  = (p.fullName || p.email || '').trim().split(/\s+/);
+      const _inits  = _parts.map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || '?';
+      const _avUrl  = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+      if (nm) nm.textContent = getDisplayName(p) || p.email || '';
+      if (av) {
+        if (_avUrl) {
+          av.innerHTML = `<img src="${_avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        } else {
+          av.textContent = _inits;
+        }
+      }
+    }
+  })();
+</script>
+</body>
+</html>

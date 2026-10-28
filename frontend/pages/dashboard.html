@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    /* ── Layout ─────────────────────────────────────────────────────────────── */
+    body { overflow-x: hidden; }
+
+    /* Match original Lucide icon rendering (currentColor stroke, no fill) */
+    .nav a svg {
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Sidebar inline override for self-contained page */
+    .sidebar {
+      min-height: 100vh;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar .nav-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 16px;
+    }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    /* ── Topbar ──────────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      border-radius: var(--radius-lg);
+    }
+    .topbar-left h2 { margin: 0; font-size: 20px; }
+    .topbar-left .breadcrumb { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    /* User avatar chip */
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px 6px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid var(--glass-border);
+      cursor: pointer;
+      transition: background var(--t);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-strong);
+      text-decoration: none;
+    }
+    .user-chip:hover { background: rgba(255,255,255,0.38); }
+    .user-chip .chip-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Notifications temporarily disabled (research/UI phase) */
+    .notifications-disabled { display: none !important; }
+
+    /* Notification bell */
+    .notif-btn {
+      position: relative;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.22);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background var(--t);
+    }
+    .notif-btn:hover { background: rgba(255,255,255,0.38); }
+    .notif-btn svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .notif-badge {
+      position: absolute;
+      top: 5px; right: 5px;
+      width: 8px; height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      border: 1.5px solid white;
+    }
+
+    /* ── Stats grid ──────────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px)  { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+      padding: 18px 20px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: -20px; right: -20px;
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      opacity: 0.08;
+    }
+    .stat-card.blue::before  { background: var(--c-arctic); }
+    .stat-card.green::before { background: #10b981; }
+    .stat-card.amber::before { background: #f59e0b; }
+    .stat-card.purple::before{ background: #8b5cf6; }
+
+    .stat-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+    }
+    .stat-icon svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .stat-icon.blue   { background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); }
+    .stat-icon.green  { background: linear-gradient(135deg, #34d399, #10b981); }
+    .stat-icon.amber  { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .stat-icon.purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+
+    .stat-label  { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value  { font-size: 32px; font-weight: 800; color: var(--text-strong); line-height: 1; margin: 2px 0; }
+    .stat-delta  { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+    .delta-up    { color: #10b981; }
+    .delta-down  { color: #ef4444; }
+    .delta-neutral { color: var(--text-muted); }
+
+    /* ── Main content row ────────────────────────────────────────────────────── */
+    .content-row {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1100px) { .content-row { grid-template-columns: 1fr; } }
+
+    /* ── Section headers ─────────────────────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-header h3 { margin: 0; font-size: 15px; }
+    .section-header .view-all {
+      font-size: 12px;
+      color: var(--c-arctic);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .section-header .view-all:hover { text-decoration: underline; }
+
+    /* ── Exam table ──────────────────────────────────────────────────────────── */
+    .exam-table-wrap {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+    }
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .tbl td {
+      padding: 11px 10px;
+      font-size: 13px;
+      color: var(--text);
+      border-bottom: 1px solid rgba(208,223,235,0.3);
+      vertical-align: middle;
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tr:hover td { background: rgba(208,223,235,0.14); }
+
+    .exam-name-cell { display: flex; align-items: center; gap: 9px; }
+    .exam-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .badge.graded   { background: rgba(16,185,129,0.12); color: #065f46; }
+    .badge.graded::before   { background: #10b981; }
+    .badge.pending  { background: rgba(245,158,11,0.12); color: #92400e; }
+    .badge.pending::before  { background: #f59e0b; }
+    .badge.reviewing{ background: rgba(59,130,246,0.12); color: #1e3a8a; }
+    .badge.reviewing::before{ background: #3b82f6; }
+    .badge.draft    { background: rgba(107,114,128,0.12); color: #374151; }
+    .badge.draft::before    { background: #9ca3af; }
+
+    /* Score bar */
+    .score-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .score-bar-bg {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(208,223,235,0.5);
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* Action icon btn */
+    .icon-btn {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.2);
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background var(--t);
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.5); }
+    .icon-btn svg { width: 13px; height: 13px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Right panel ─────────────────────────────────────────────────────────── */
+    .right-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Donut chart */
+    .donut-wrap {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+    }
+    .donut-svg-wrap { display: flex; justify-content: center; margin: 12px 0; }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+    .legend-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+    .legend-label { display: flex; align-items: center; gap: 7px; color: var(--text); }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legend-val { font-weight: 700; color: var(--text-strong); }
+
+    /* Quick actions */
+    .quick-actions-wrap {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+    }
+    .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .qa-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.22);
+      cursor: pointer;
+      transition: background var(--t), transform var(--t);
+      text-decoration: none;
+      color: var(--text-strong);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .qa-btn:hover { background: rgba(255,255,255,0.45); transform: translateY(-1px); color: var(--text-strong); }
+    .qa-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+    }
+    .qa-icon svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .qa-icon.blue   { background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); }
+    .qa-icon.green  { background: linear-gradient(135deg, #34d399, #10b981); }
+    .qa-icon.amber  { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .qa-icon.purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+
+    /* ── Progress overview ───────────────────────────────────────────────────── */
+    .progress-section {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 900px) { .progress-section { grid-template-columns: 1fr; } }
+
+    .progress-card {
+      padding: 16px 18px;
+      border-radius: var(--radius-lg);
+    }
+    .progress-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .progress-title { font-size: 13px; font-weight: 600; color: var(--text-strong); }
+    .progress-pct { font-size: 18px; font-weight: 800; color: var(--text-strong); }
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(208,223,235,0.5);
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+    .progress-sub { font-size: 11px; color: var(--text-muted); }
+
+    /* ── Notification panel ──────────────────────────────────────────────────── */
+    .notif-panel {
+      position: fixed;
+      top: 0; right: -360px;
+      width: 340px;
+      height: 100vh;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-left: 1px solid var(--glass-border);
+      box-shadow: -12px 0 40px rgba(40,64,91,0.12);
+      z-index: 100;
+      transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+      display: flex;
+      flex-direction: column;
+    }
+    .notif-panel.open { right: 0; }
+    .notif-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 18px 14px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .notif-panel-head h3 { margin: 0; font-size: 15px; }
+    .notif-close {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.3);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .notif-close svg { width: 14px; height: 14px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .notif-list { flex: 1; overflow-y: auto; padding: 12px; }
+    .notif-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.35);
+      border: 1px solid rgba(208,223,235,0.5);
+      cursor: pointer;
+      transition: background var(--t);
+    }
+    .notif-item:hover { background: rgba(255,255,255,0.6); }
+    .notif-item.unread { background: rgba(104,149,188,0.08); border-color: rgba(104,149,188,0.3); }
+    .notif-item-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-arctic); flex-shrink: 0; margin-top: 5px; }
+    .notif-item.read .notif-item-dot { background: transparent; }
+    .notif-item-body { flex: 1; }
+    .notif-item-msg { font-size: 12px; color: var(--text); line-height: 1.4; }
+    .notif-item-time { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .notif-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      background: rgba(0,0,0,0.15);
+    }
+    .notif-overlay.open { display: block; }
+
+    /* ── Logout modal ────────────────────────────────────────────────────────── */
+    .logout-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 20, 40, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+      z-index: 200;
+    }
+    .logout-overlay.active { opacity: 1; visibility: visible; }
+    .logout-modal {
+      background: rgba(255,255,255,0.96);
+      padding: 32px 28px;
+      border-radius: 18px;
+      text-align: center;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.22);
+      transform: scale(0.95);
+      transition: transform 0.25s ease;
+    }
+    .logout-overlay.active .logout-modal { transform: scale(1); }
+    .logout-icon-ring {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(239,68,68,0.1);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 14px;
+    }
+    .logout-icon-ring svg { width: 26px; height: 26px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 20px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions { display: flex; justify-content: center; gap: 12px; }
+
+    /* ── Responsive sidebar toggle ───────────────────────────────────────────── */
+    .sidebar-toggle {
+      display: none;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.22);
+      place-items: center;
+      cursor: pointer;
+    }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    /* ── Search bar ──────────────────────────────────────────────────────────── */
+    .topbar-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid var(--glass-border);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .topbar-search svg { width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .topbar-search input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 13px;
+      color: var(--text-strong);
+      width: 160px;
+    }
+    .topbar-search input::placeholder { color: var(--text-muted); }
+
+    /* ── Empty state ─────────────────────────────────────────────────────────── */
+    .empty-row td {
+      text-align: center;
+      padding: 28px !important;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* animate stat value count-up */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .stat-card { animation: fadeSlideUp 0.4s ease both; }
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.10s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.20s; }
+  </style>
+  <script src="../js/api.js"></script>
+</head>
+
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ══════════ SIDEBAR ════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html" class="active" data-page="dashboard">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html" data-page="manage-exams">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html" data-page="rubrics">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html" data-page="answer-files">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html" data-page="auto-grading">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html" data-page="results-reviews">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html" data-page="analytics">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html" data-page="learning-gaps">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html" data-page="archive">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html" data-page="profile">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN ═══════════════════════════════════════════════════════ -->
+  <main>
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topbar-left">
+          <h2>Dashboard</h2>
+          <div class="breadcrumb" id="todayDate"></div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="Search exams…" />
+        </div>
+        <button class="notif-btn notifications-disabled" id="notifBtn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notifBadge"></span>
+        </button>
+        <a href="./profile.html" class="user-chip" id="userChip">
+          <div class="chip-avatar" id="chipAvatar">?</div>
+          <span id="chipName">Instructor</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Stats ── -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card glass lift blue">
+        <div class="stat-icon blue">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="stat-label">Total Exams</div>
+        <div class="stat-value" id="statExams">–</div>
+        <div class="stat-delta delta-up" id="statExamsDelta">↑ 2 this month</div>
+      </div>
+      <div class="stat-card glass lift green">
+        <div class="stat-icon green">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-label">Total Answer Files</div>
+        <div class="stat-value" id="statSubmissions">–</div>
+        <div class="stat-delta delta-up" id="statSubmissionsDelta">↑ 12 this week</div>
+      </div>
+      <div class="stat-card glass lift amber">
+        <div class="stat-icon amber">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="stat-label">Pending Review</div>
+        <div class="stat-value" id="statPending">–</div>
+        <div class="stat-delta delta-neutral" id="statPendingDelta">Awaiting action</div>
+      </div>
+      <div class="stat-card glass lift purple">
+        <div class="stat-icon purple">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="stat-label">Average Score</div>
+        <div class="stat-value" id="statAvg">–</div>
+        <div class="stat-delta delta-up" id="statAvgDelta">↑ 3.2% vs last exam</div>
+      </div>
+    </div>
+
+    <!-- ── Progress bars ── -->
+    <div class="progress-section">
+      <div class="progress-card glass">
+        <div class="progress-header">
+          <div class="progress-title">Grading Progress</div>
+          <div class="progress-pct" id="gradingPct">0%</div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="gradingBar" style="width:0%; background: linear-gradient(90deg, var(--c-ice), var(--c-arctic));"></div>
+        </div>
+        <div class="progress-sub" id="gradingSubtitle">0 of 0 answer files graded</div>
+      </div>
+      <div class="progress-card glass">
+        <div class="progress-header">
+          <div class="progress-title">Review Completion</div>
+          <div class="progress-pct" id="reviewPct">0%</div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="reviewBar" style="width:0%; background: linear-gradient(90deg, #a78bfa, #7c3aed);"></div>
+        </div>
+        <div class="progress-sub" id="reviewSubtitle">0 of 0 exams reviewed</div>
+      </div>
+      <div class="progress-card glass">
+        <div class="progress-header">
+          <div class="progress-title">Pass Rate</div>
+          <div class="progress-pct" id="passPct">0%</div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="passBar" style="width:0%; background: linear-gradient(90deg, #34d399, #10b981);"></div>
+        </div>
+        <div class="progress-sub" id="passSubtitle">Students scoring ≥ 60%</div>
+      </div>
+    </div>
+
+    <!-- ── Main content row ── -->
+    <div class="content-row">
+
+      <!-- Exams table -->
+      <div class="exam-table-wrap glass">
+        <div class="section-header">
+          <h3>Recent Exams</h3>
+          <a href="./manage-exams.html" class="view-all">View all →</a>
+        </div>
+        <table class="tbl" id="examTable">
+          <thead>
+            <tr>
+              <th>Exam</th>
+              <th>Date</th>
+              <th>Answer Files</th>
+              <th>Avg Score</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="examTbody">
+            <tr class="empty-row"><td colspan="6">Loading exams…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right panel -->
+      <div class="right-panel">
+
+        <!-- Donut chart -->
+        <div class="donut-wrap glass">
+          <div class="section-header">
+            <h3>Grading Status</h3>
+          </div>
+          <div class="donut-svg-wrap">
+            <svg id="donutSvg" width="130" height="130" viewBox="0 0 130 130">
+              <circle cx="65" cy="65" r="50" fill="none" stroke="rgba(208,223,235,0.5)" stroke-width="18"/>
+              <!-- segments injected by JS -->
+            </svg>
+          </div>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="quick-actions-wrap glass">
+          <div class="section-header">
+            <h3>Quick Actions</h3>
+          </div>
+          <div class="qa-grid">
+            <a href="./manage-exams.html" class="qa-btn">
+              <div class="qa-icon blue">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+              New Exam
+            </a>
+            <a href="./answer-files.html" class="qa-btn">
+              <div class="qa-icon green">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              Upload Answers
+            </a>
+            <a href="./auto-grading.html" class="qa-btn">
+              <div class="qa-icon amber">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              Start Grading
+            </a>
+            <a href="./analytics.html" class="qa-btn">
+              <div class="qa-icon purple">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </div>
+              Analytics
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-space"></div>
+  </main>
+</div>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Notification panel -->
+<div class="notif-overlay notifications-disabled" id="notifOverlay"></div>
+<div class="notif-panel notifications-disabled" id="notifPanel">
+  <div class="notif-panel-head">
+    <h3>Notifications <span class="pill blue" id="unreadCount" style="font-size:11px; padding:2px 8px;"></span></h3>
+    <button class="notif-close" id="notifClose">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="notif-list" id="notifList"></div>
+</div>
+
+<!-- Logout modal -->
+<div id="logoutModal" class="logout-overlay">
+  <div class="logout-modal">
+    <div class="logout-icon-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign out of Taqdeer?</h3>
+    <p>You will be redirected to the login page.</p>
+    <div class="logout-actions">
+      <button class="btn" onclick="closeLogoutModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmLogout()">Yes, Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SCRIPTS ════════════════════════════════════════════════════════ -->
+<script>
+authGuard();
+
+(function () {
+
+  // ── Feature flags ────────────────────────────────────────────────────────────
+  // Notifications temporarily disabled (research/UI phase).
+  // To re-enable: set ENABLE_NOTIFICATIONS = true (also remove 'notifications-disabled'
+  // class from #notifBtn, #notifOverlay, and #notifPanel in the HTML above).
+  const ENABLE_NOTIFICATIONS = false;
+
+  // ── State (populated by API on init) ────────────────────────────────────────
+  let exams  = [];
+  let notifs = [];
+
+  // ── Date ────────────────────────────────────────────────────────────────────
+  document.getElementById('todayDate').textContent =
+    new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  // ── User info from JWT profile ───────────────────────────────────────────────
+  (function syncChip() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    if (!p) return;
+    const parts    = (p.fullName || '').trim().split(/\s+/);
+    const initials = parts.map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || 'U';
+    const av = document.getElementById('chipAvatar');
+    const nm = document.getElementById('chipName');
+    if (nm) nm.textContent = getDisplayName(p) || p.email || '';
+    const avatarUrl = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+    if (av) {
+      if (avatarUrl) {
+        av.innerHTML = `<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      } else {
+        av.textContent = initials;
+      }
+    }
+  })();
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function countUp(el, target, suffix) {
+    let n = 0, step = Math.max(1, Math.floor(target / 40));
+    const iv = setInterval(() => {
+      n = Math.min(n + step, target);
+      el.textContent = n + (suffix || '');
+      if (n >= target) clearInterval(iv);
+    }, 28);
+  }
+
+  function setBar(barId, pctId, pct) {
+    document.getElementById(barId).style.width = pct + '%';
+    document.getElementById(pctId).textContent = pct + '%';
+  }
+
+  function relativeTime(isoStr) {
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const secs = Math.floor(diff / 1000);
+    if (secs < 60)  return 'Just now';
+    const mins = Math.floor(secs / 60);
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs  = Math.floor(mins / 60);
+    if (hrs < 24)   return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7)   return `${days}d ago`;
+    return new Date(isoStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // ── Render stats from loaded exams ───────────────────────────────────────────
+  function renderStats() {
+    const totalFiles   = exams.reduce((a, e) => a + (e.answerFiles || 0), 0);
+    const totalGraded  = exams.reduce((a, e) => a + (e.graded      || 0), 0);
+    const pendingCount = exams.filter(e => e.status === 'pending' || e.status === 'reviewing').length;
+    const scoredExams  = exams.filter(e => (e.avgScore || 0) > 0);
+    const avgScore     = scoredExams.length
+      ? Math.round(scoredExams.reduce((a, e) => a + e.avgScore, 0) / scoredExams.length)
+      : 0;
+
+    // Count exams created this calendar month
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const newThisMonth = exams.filter(e => new Date(e.created_at) >= monthStart).length;
+
+    countUp(document.getElementById('statExams'),       exams.length);
+    countUp(document.getElementById('statSubmissions'), totalFiles);
+    countUp(document.getElementById('statPending'),     pendingCount);
+    countUp(document.getElementById('statAvg'),         avgScore, '%');
+
+    document.getElementById('statExamsDelta').className    = 'stat-delta ' + (newThisMonth > 0 ? 'delta-up' : 'delta-neutral');
+    document.getElementById('statExamsDelta').textContent  = newThisMonth > 0 ? `↑ ${newThisMonth} this month` : 'No new exams this month';
+    document.getElementById('statSubmissionsDelta').className   = 'stat-delta delta-neutral';
+    document.getElementById('statSubmissionsDelta').textContent = `${totalFiles} files total`;
+    document.getElementById('statPendingDelta').className   = 'stat-delta delta-neutral';
+    document.getElementById('statPendingDelta').textContent = pendingCount > 0 ? 'Awaiting action' : 'All up to date';
+    document.getElementById('statAvgDelta').className   = 'stat-delta delta-neutral';
+    document.getElementById('statAvgDelta').textContent = scoredExams.length > 0 ? `Across ${scoredExams.length} graded exams` : 'No graded exams yet';
+
+    // Progress bars (grading data from Exam model — populated post-grading)
+    const gradingPct    = totalFiles  > 0 ? Math.round(totalGraded  / totalFiles  * 100) : 0;
+    const reviewedCount = exams.filter(e => e.status === 'graded').length;
+    const reviewPct     = exams.length > 0 ? Math.round(reviewedCount / exams.length * 100) : 0;
+    const passCount     = scoredExams.filter(e => e.avgScore >= 60).length;
+    const passPct       = scoredExams.length > 0 ? Math.round(passCount / scoredExams.length * 100) : 0;
+
+    setTimeout(() => {
+      setBar('gradingBar', 'gradingPct', gradingPct);
+      document.getElementById('gradingSubtitle').textContent = `${totalGraded} of ${totalFiles} answer files graded`;
+      setBar('reviewBar', 'reviewPct', reviewPct);
+      document.getElementById('reviewSubtitle').textContent = `${reviewedCount} of ${exams.length} exams fully graded`;
+      setBar('passBar', 'passPct', passPct);
+      document.getElementById('passSubtitle').textContent = `${passCount} of ${scoredExams.length} exams above 60% avg`;
+    }, 300);
+
+    // Donut chart
+    renderDonut();
+  }
+
+  // ── Donut chart ──────────────────────────────────────────────────────────────
+  function renderDonut() {
+    const gradedCount    = exams.filter(e => e.status === 'graded').length;
+    const reviewingCount = exams.filter(e => e.status === 'reviewing').length;
+    const pendingCount   = exams.filter(e => e.status === 'pending').length;
+    const total          = exams.length || 1;
+
+    const donutData = [
+      { label: 'Graded',    value: gradedCount,    color: '#10b981' },
+      { label: 'Reviewing', value: reviewingCount, color: '#3b82f6' },
+      { label: 'Pending',   value: pendingCount,   color: '#f59e0b' },
+    ].filter(d => d.value > 0);
+
+    const svg    = document.getElementById('donutSvg');
+    // Clear previous segments (keep the base circle at index 0)
+    while (svg.children.length > 1) svg.removeChild(svg.lastChild);
+
+    const r = 50, cx = 65, cy = 65, circum = 2 * Math.PI * r;
+    let offset = -Math.PI / 2;
+
+    donutData.forEach(seg => {
+      const frac   = seg.value / total;
+      const arc    = frac * circum;
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); circle.setAttribute('r', r);
+      circle.setAttribute('fill', 'none'); circle.setAttribute('stroke', seg.color);
+      circle.setAttribute('stroke-width', '18');
+      circle.setAttribute('stroke-dasharray', `${arc} ${circum - arc}`);
+      circle.setAttribute('stroke-dashoffset', -offset * r);
+      circle.style.transition = 'stroke-dasharray 0.8s ease';
+      svg.appendChild(circle);
+      offset += frac * 2 * Math.PI;
+    });
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', cx); text.setAttribute('y', cy - 6);
+    text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-size', '22');
+    text.setAttribute('font-weight', '800'); text.setAttribute('fill', 'rgba(40,64,91,0.9)');
+    text.textContent = exams.length;
+    svg.appendChild(text);
+
+    const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    sub.setAttribute('x', cx); sub.setAttribute('y', cy + 12);
+    sub.setAttribute('text-anchor', 'middle'); sub.setAttribute('font-size', '10');
+    sub.setAttribute('fill', 'rgba(40,64,91,0.55)');
+    sub.textContent = 'exams';
+    svg.appendChild(sub);
+
+    const legend = document.getElementById('donutLegend');
+    legend.innerHTML = '';
+    if (donutData.length === 0) {
+      legend.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;">No exams yet</div>';
+    } else {
+      donutData.forEach(seg => {
+        const row = document.createElement('div');
+        row.className = 'legend-row';
+        row.innerHTML = `<span class="legend-label"><span class="legend-dot" style="background:${seg.color}"></span>${seg.label}</span><span class="legend-val">${seg.value}</span>`;
+        legend.appendChild(row);
+      });
+    }
+  }
+
+  // ── Exam table ───────────────────────────────────────────────────────────────
+  const COLORS_DOT = { graded:'#10b981', reviewing:'#3b82f6', pending:'#f59e0b', draft:'#9ca3af' };
+
+  function renderTable(data) {
+    const tbody = document.getElementById('examTbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No exams yet. <a href="./manage-exams.html">Create one →</a></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(e => {
+      const avg        = e.avgScore || 0;
+      const scoreColor = avg >= 75 ? '#10b981' : avg >= 60 ? '#f59e0b' : avg > 0 ? '#ef4444' : '#9ca3af';
+      const scoreBar   = avg > 0
+        ? `<div class="score-bar-wrap">
+             <div class="score-bar-bg"><div class="score-bar-fill" style="width:${avg}%; background:${scoreColor};"></div></div>
+             <span style="font-size:12px; font-weight:700; color:${scoreColor}; min-width:34px;">${Math.round(avg)}%</span>
+           </div>`
+        : `<span style="color:var(--text-muted); font-size:12px;">—</span>`;
+      const dateStr = new Date(e.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      return `<tr>
+        <td>
+          <div class="exam-name-cell">
+            <span class="exam-dot" style="background:${COLORS_DOT[e.status] || '#9ca3af'}"></span>
+            <span style="font-weight:600; color:var(--text-strong);">${e.name}</span>
+          </div>
+        </td>
+        <td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${dateStr}${e.semester ? `<div style="font-size:10px;margin-top:2px;color:var(--text-muted);opacity:.75;">${{ first: 'First Sem', second: 'Second Sem', summer: 'Summer Sem' }[e.semester] || ''}</div>` : ''}</td>
+        <td style="font-weight:600;">${e.answerFiles || 0}</td>
+        <td style="min-width:140px;">${scoreBar}</td>
+        <td><span class="badge ${e.status}">${e.status.charAt(0).toUpperCase() + e.status.slice(1)}</span></td>
+        <td>
+          <div style="display:flex;gap:5px;">
+            <a class="icon-btn" href="./manage-exams.html" title="View in exams">
+              <svg viewBox="0 0 24 24"><path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </a>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Live search filter
+  document.getElementById('searchInput').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    renderTable(q ? exams.filter(e => e.name.toLowerCase().includes(q)) : exams);
+  });
+
+  // ── Notifications ────────────────────────────────────────────────────────────
+  // All notification logic is preserved but guarded by ENABLE_NOTIFICATIONS.
+  // To re-enable: set ENABLE_NOTIFICATIONS = true above.
+  function renderNotifs() {
+    const unread = notifs.filter(n => !n.isRead).length;
+    const badge  = document.getElementById('notifBadge');
+    badge.style.display = unread > 0 ? 'block' : 'none';
+    document.getElementById('unreadCount').textContent = unread > 0 ? unread + ' new' : '';
+
+    const list = document.getElementById('notifList');
+    if (!notifs.length) {
+      list.innerHTML = '<div style="text-align:center; padding:24px; color:var(--text-muted); font-size:13px;">All caught up!</div>';
+      return;
+    }
+    list.innerHTML = notifs.map(n => `
+      <div class="notif-item ${n.isRead ? 'read' : 'unread'}" data-notif-id="${n.id}">
+        <div class="notif-item-dot"></div>
+        <div class="notif-item-body">
+          <div class="notif-item-msg">${n.message}</div>
+          <div class="notif-item-time">${relativeTime(n.createdAt)}</div>
+        </div>
+      </div>`).join('');
+
+    document.querySelectorAll('.notif-item:not(.read)').forEach(el => {
+      el.addEventListener('click', async () => {
+        const id = parseInt(el.dataset.notifId, 10);
+        try {
+          await apiFetch(`/notifications/${id}/read`, { method: 'PATCH' });
+          const n = notifs.find(x => x.id === id);
+          if (n) n.isRead = true;
+          renderNotifs();
+        } catch (err) {
+          console.error('Failed to mark notification read:', err);
+        }
+      });
+    });
+  }
+
+  if (ENABLE_NOTIFICATIONS) {
+    const notifBtn     = document.getElementById('notifBtn');
+    const notifPanel   = document.getElementById('notifPanel');
+    const notifOverlay = document.getElementById('notifOverlay');
+    const notifClose   = document.getElementById('notifClose');
+
+    notifBtn.addEventListener('click', () => {
+      notifPanel.classList.add('open');
+      notifOverlay.classList.add('open');
+    });
+    function closeNotifPanel() {
+      notifPanel.classList.remove('open');
+      notifOverlay.classList.remove('open');
+    }
+    notifClose.addEventListener('click', closeNotifPanel);
+    notifOverlay.addEventListener('click', closeNotifPanel);
+  }
+
+  // ── Init: load all data from backend ─────────────────────────────────────────
+  async function init() {
+    try {
+      [exams, notifs] = await Promise.all([
+        apiFetch('/exams/'),
+        ENABLE_NOTIFICATIONS ? apiFetch('/notifications/') : Promise.resolve([]),
+      ]);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      exams  = [];
+      notifs = [];
+    }
+
+    renderStats();
+    renderTable(exams);
+    if (ENABLE_NOTIFICATIONS) renderNotifs();
+  }
+
+  init();
+
+  // ── Sidebar mobile toggle ────────────────────────────────────────────────────
+  const sidebar        = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('mobile-open');
+    sidebarOverlay.classList.toggle('open');
+  });
+  sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    sidebarOverlay.classList.remove('open');
+  });
+
+  // ── Logout ───────────────────────────────────────────────────────────────────
+  document.getElementById('logoutTrigger').addEventListener('click', (e) => {
+    e.preventDefault();
+    openLogoutModal();
+  });
+
+})();
+
+// these need to be global for inline onclick
+function openLogoutModal()  { document.getElementById('logoutModal').classList.add('active'); }
+function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
+function confirmLogout()    { doLogout(); }
+
+// close logout on overlay click
+document.getElementById('logoutModal').addEventListener('click', function(e) {
+  if (e.target === this) closeLogoutModal();
+});
+
+// Profile chip is now synced inside the main IIFE above using taqdeer_profile.
+</script>
+</body>
+</html>

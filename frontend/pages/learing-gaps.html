@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Learning Gap Analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { overflow-x: hidden; }
+
+    .nav a svg { stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+    .sidebar { min-height:100vh; height:100vh; position:sticky; top:0; display:flex; flex-direction:column; }
+    .sidebar .nav-scroll { flex:1; overflow-y:auto; padding-bottom:16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width:4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:2px; }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────────── */
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; margin-bottom:20px; border-radius:var(--radius-lg); }
+    .topbar-left h2 { margin:0; font-size:20px; }
+    .topbar-left .breadcrumb { font-size:12px; color:var(--text-muted); margin-top:2px; }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+    .user-chip { display:flex; align-items:center; gap:8px; padding:6px 12px 6px 6px; border-radius:999px; background:rgba(255,255,255,0.25); border:1px solid var(--glass-border); cursor:pointer; transition:background var(--t); font-size:13px; font-weight:600; color:var(--text-strong); }
+    .user-chip:hover { background:rgba(255,255,255,0.38); }
+    .user-chip .chip-avatar { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--c-ice),var(--c-arctic)); display:grid; place-items:center; color:#fff; font-size:12px; font-weight:700; }
+
+    /* ── Exam selector ──────────────────────────────────────────────────────── */
+    .exam-selector-wrap { margin-bottom:20px; padding:18px 22px; border-radius:var(--radius-lg); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .selector-label { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--text-strong); white-space:nowrap; }
+    .selector-label svg { width:18px; height:18px; stroke:var(--c-arctic); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .exam-select { flex:1; min-width:240px; padding:10px 38px 10px 14px; border-radius:var(--radius-sm); border:1px solid rgba(208,223,235,0.75); background:rgba(255,255,255,0.28) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23446B95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center; backdrop-filter:blur(var(--blur)); color:var(--text-strong); font-size:14px; font-weight:500; outline:none; cursor:pointer; transition:border-color var(--t),box-shadow var(--t); appearance:none; -webkit-appearance:none; }
+    .exam-select:focus { border-color:rgba(104,149,188,0.9); box-shadow:0 0 0 4px var(--focus); }
+    .btn-load { display:flex; align-items:center; gap:8px; padding:10px 20px; border-radius:var(--radius-sm); border:none; background:linear-gradient(135deg,var(--c-arctic),var(--c-midnight)); color:#fff; font-size:13px; font-weight:700; cursor:pointer; transition:transform var(--t),box-shadow var(--t); box-shadow:0 8px 24px rgba(68,107,149,0.28); }
+    .btn-load:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 32px rgba(40,64,91,0.22); }
+    .btn-load:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+    .btn-load svg { width:16px; height:16px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+    /* ── Empty state ────────────────────────────────────────────────────────── */
+    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:64px 24px; border-radius:var(--radius-lg); text-align:center; color:var(--text-muted); }
+    .empty-icon { width:56px; height:56px; border-radius:16px; background:rgba(208,223,235,0.3); display:grid; place-items:center; }
+    .empty-icon svg { width:28px; height:28px; stroke:var(--c-powder); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+    .empty-state h3 { margin:0; font-size:16px; color:var(--text); }
+    .empty-state p  { margin:0; font-size:13px; }
+
+    #gap-results { display:none; }
+
+    /* ── Section card ───────────────────────────────────────────────────────── */
+    .section-card { padding:22px 24px; border-radius:var(--radius-lg); margin-bottom:18px; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+    .section-title { display:flex; align-items:center; gap:10px; }
+    .section-icon { width:36px; height:36px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; }
+    .section-icon svg { width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .section-icon.purple { background:linear-gradient(135deg,#a78bfa,#7c3aed); }
+    .section-icon.rose   { background:linear-gradient(135deg,#fb7185,#f43f5e); }
+    .section-icon.amber  { background:linear-gradient(135deg,#fbbf24,#f59e0b); }
+    .section-icon.teal   { background:linear-gradient(135deg,#2dd4bf,#0d9488); }
+    .section-icon.blue   { background:linear-gradient(135deg,#60a5fa,#2563eb); }
+    .section-icon.indigo { background:linear-gradient(135deg,#818cf8,#4f46e5); }
+    .section-icon.slate  { background:linear-gradient(135deg,#94a3b8,#475569); }
+    .section-icon.green  { background:linear-gradient(135deg,#34d399,#059669); }
+    .section-title h3 { margin:0; font-size:15px; color:var(--text-strong); }
+    .section-title p  { margin:0; font-size:12px; color:var(--text-muted); }
+
+    /* ── Level labels ───────────────────────────────────────────────────────── */
+    .level-label {
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em;
+      color:var(--text-muted); margin-bottom:10px; display:flex; align-items:center; gap:8px;
+    }
+    .level-label::after { content:''; flex:1; height:1px; background:var(--glass-border); }
+
+    /* ── Results layout (main + sticky right panel) ──────────────────────────── */
+    .results-layout {
+      display:grid;
+      grid-template-columns:1fr 272px;
+      gap:20px;
+      align-items:start;
+    }
+    .results-main { min-width:0; }
+
+    /* ── Executive Snapshot Banner ──────────────────────────────────────────── */
+    .exec-banner {
+      display:flex; align-items:stretch; gap:10px; flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .exec-stat {
+      flex:1; min-width:150px;
+      display:flex; align-items:flex-start; gap:12px;
+      padding:14px 16px;
+      border-radius:var(--radius-lg);
+      border:1px solid var(--glass-border);
+      background:rgba(255,255,255,0.32);
+      backdrop-filter:blur(18px);
+    }
+    .exec-stat-icon {
+      width:38px; height:38px; border-radius:10px;
+      display:grid; place-items:center; flex-shrink:0;
+      margin-top:2px;
+    }
+    .exec-stat-icon svg { width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .exec-stat-icon.critical { background:linear-gradient(135deg,#fb7185,#f43f5e); }
+    .exec-stat-icon.warning  { background:linear-gradient(135deg,#fb923c,#ea580c); }
+    .exec-stat-icon.strong   { background:linear-gradient(135deg,#34d399,#059669); }
+    .exec-stat-icon.info     { background:linear-gradient(135deg,#60a5fa,#2563eb); }
+    .exec-stat-icon.gain     { background:linear-gradient(135deg,#a78bfa,#7c3aed); }
+    .exec-stat-body { min-width:0; }
+    .exec-stat-num  { font-size:20px; font-weight:800; color:var(--text-strong); line-height:1; }
+    .exec-stat-lbl  { font-size:11px; color:var(--text-muted); margin-top:3px; font-weight:500; }
+    .exec-stat-interp {
+      font-size:10.5px; color:var(--text-muted); margin-top:5px; line-height:1.5;
+      padding-top:5px; border-top:1px solid var(--glass-border);
+    }
+    .exec-stat-interp.below { color:#b45309; }
+    .exec-stat-interp.above { color:#047857; }
+
+    /* ── Focus Distribution Strip ───────────────────────────────────────────── */
+    .focus-strip {
+      display:flex; gap:10px; flex-wrap:wrap;
+      padding:14px 18px;
+      border-radius:var(--radius-lg);
+      background:rgba(255,255,255,0.22);
+      border:1px solid var(--glass-border);
+      margin-bottom:20px;
+      align-items:center;
+    }
+    .focus-strip-label {
+      font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+      color:var(--text-muted); white-space:nowrap; margin-right:4px;
+    }
+    .focus-items { display:flex; gap:12px; flex-wrap:wrap; flex:1; align-items:stretch; }
+    .focus-item {
+      display:flex; flex-direction:column; gap:4px;
+      min-width:160px; flex:1;
+    }
+    .focus-item-row { display:flex; align-items:center; gap:8px; }
+    .focus-item-name { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; min-width:120px; }
+    .focus-item-bar-wrap { flex:1; height:5px; border-radius:999px; background:rgba(208,223,235,0.4); overflow:hidden; }
+    .focus-item-bar { height:100%; border-radius:999px; transition:width 0.6s ease; }
+    .focus-item-pct { font-size:12px; font-weight:700; color:var(--text-strong); min-width:36px; text-align:right; }
+    .focus-item-interp { font-size:11px; color:var(--text-muted); line-height:1.4; font-style:italic; }
+    .focus-empty { font-size:12px; color:var(--text-muted); font-style:italic; }
+
+    /* ── Intervention cards ─────────────────────────────────────────────────── */
+    .intervention-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+    .intervention-card {
+      display:flex; gap:14px; align-items:flex-start;
+      padding:16px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.3);
+      border:1px solid var(--glass-border);
+    }
+    .intervention-num {
+      width:30px; height:30px; border-radius:9px; flex-shrink:0;
+      display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--c-arctic),var(--c-midnight));
+      color:#fff; font-size:13px; font-weight:800;
+    }
+    .intervention-body { min-width:0; }
+    .intervention-body strong { display:block; font-size:13px; color:var(--text-strong); margin-bottom:4px; line-height:1.35; }
+    .intervention-body span { font-size:12px; color:var(--text-muted); line-height:1.4; }
+
+    /* ── Priority table ─────────────────────────────────────────────────────── */
+    .priority-table-wrap { overflow-x:auto; }
+    .priority-table {
+      width:100%; border-collapse:separate; border-spacing:0 6px;
+      min-width:560px;
+    }
+    .priority-table thead th {
+      font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+      color:var(--text-muted); padding:6px 14px; text-align:left;
+    }
+    .priority-table thead th:first-child { padding-left:0; }
+    .priority-table tbody tr {
+      background:rgba(255,255,255,0.28);
+      border-radius:10px;
+      transition:background var(--t);
+    }
+    .priority-table tbody tr:hover { background:rgba(255,255,255,0.42); }
+    .priority-table tbody td {
+      padding:12px 14px; font-size:13px; color:var(--text);
+      border-top:1px solid var(--glass-border);
+      border-bottom:1px solid var(--glass-border);
+    }
+    .priority-table tbody td:first-child { border-left:1px solid var(--glass-border); border-radius:10px 0 0 10px; padding-left:14px; }
+    .priority-table tbody td:last-child  { border-right:1px solid var(--glass-border); border-radius:0 10px 10px 0; }
+    .rank-badge { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; font-size:12px; font-weight:800; color:#fff; }
+    .rank-badge.r1 { background:linear-gradient(135deg,#fb7185,#f43f5e); }
+    .rank-badge.r2 { background:linear-gradient(135deg,#fb923c,#ea580c); }
+    .rank-badge.r3 { background:linear-gradient(135deg,#fbbf24,#d97706); color:#7c2d12; }
+    .rank-badge.rn { background:rgba(148,163,184,0.4); color:var(--text-muted); }
+    .topic-cell { font-weight:600; color:var(--text-strong); }
+    .topic-cell .q-ref { font-size:11px; color:var(--text-muted); font-weight:500; margin-top:2px; }
+    .affected-bar-wrap { display:flex; align-items:center; gap:8px; }
+    .affected-bar { height:6px; border-radius:999px; background:rgba(208,223,235,0.4); overflow:hidden; width:80px; flex-shrink:0; }
+    .affected-bar-fill { height:100%; border-radius:999px; transition:width 0.6s ease; }
+    .rec-text { font-size:12px; color:var(--text-muted); line-height:1.4; max-width:240px; }
+
+    /* ── Impact panel ───────────────────────────────────────────────────────── */
+    .impact-grid { display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:start; }
+    .impact-gauge {
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      padding:22px 28px;
+      border-radius:16px;
+      background:linear-gradient(135deg,rgba(68,107,149,0.12),rgba(40,64,91,0.08));
+      border:1px solid rgba(104,149,188,0.25);
+      text-align:center;
+      min-width:140px;
+    }
+    .impact-pct { font-size:38px; font-weight:900; color:var(--c-arctic); line-height:1; }
+    .impact-pct-label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+    .impact-items { display:flex; flex-direction:column; gap:10px; }
+    .impact-item { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.28); border:1px solid var(--glass-border); }
+    .impact-item-gain { font-size:16px; font-weight:800; color:var(--c-arctic); flex-shrink:0; width:44px; text-align:center; }
+    .impact-item-body strong { display:block; font-size:13px; color:var(--text-strong); margin-bottom:2px; }
+    .impact-item-body span   { font-size:12px; color:var(--text-muted); line-height:1.4; }
+    .impact-disclaimer { margin-top:10px; font-size:11px; color:var(--text-muted); font-style:italic; }
+
+    /* ── (accordion CSS removed — wrapper eliminated) ───────────────────────── */
+    .adv-accordion-header {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:16px 22px;
+      border-radius:var(--radius-lg);
+      background:rgba(255,255,255,0.22);
+      border:1px solid var(--glass-border);
+      cursor:pointer;
+      transition:background var(--t),box-shadow var(--t);
+      user-select:none;
+    }
+    .adv-accordion-header:hover { background:rgba(255,255,255,0.34); }
+    .adv-accordion.open .adv-accordion-header { border-radius:var(--radius-lg) var(--radius-lg) 0 0; border-bottom-color:transparent; background:rgba(255,255,255,0.32); }
+    .adv-accordion-title { display:flex; align-items:center; gap:10px; }
+    .adv-accordion-title h3 { margin:0; font-size:14px; font-weight:700; color:var(--text-strong); }
+    .adv-accordion-title p { margin:0; font-size:12px; color:var(--text-muted); }
+    .adv-accordion-right { display:flex; align-items:center; gap:10px; }
+    .adv-count { font-size:12px; font-weight:600; color:var(--text-muted); padding:3px 10px; border-radius:999px; background:rgba(208,223,235,0.35); border:1px solid var(--glass-border); }
+    .adv-chevron { width:18px; height:18px; stroke:var(--text-muted); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform 0.3s ease; flex-shrink:0; }
+    .adv-accordion.open .adv-chevron { transform:rotate(180deg); }
+    .adv-accordion-body {
+      overflow:hidden;
+      max-height:0;
+      transition:max-height 0.45s ease;
+      background:rgba(255,255,255,0.10);
+      border:1px solid var(--glass-border);
+      border-top:none;
+      border-radius:0 0 var(--radius-lg) var(--radius-lg);
+      padding:0 4px;
+    }
+    .adv-accordion.open .adv-accordion-body { /* max-height set via JS */ }
+    .adv-inner { padding:16px 18px; display:flex; flex-direction:column; gap:0; }
+
+    /* ── Cluster cards ──────────────────────────────────────────────────────── */
+    .cluster-grid { display:flex; flex-wrap:wrap; gap:14px; }
+    .cluster-card { flex:1 1 260px; padding:16px; border-radius:14px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.25); }
+    .cluster-card h4 { margin:0 0 8px; font-size:13px; font-weight:700; color:var(--text-strong); }
+    .cluster-qs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .cluster-qs .q-chip { font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; background:rgba(167,139,250,0.2); color:#7c3aed; border:1px solid rgba(167,139,250,0.4); }
+    .cluster-card p { margin:0; font-size:12.5px; color:var(--text); line-height:1.5; }
+    .cluster-type-badge { display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:2px 8px; border-radius:5px; margin-bottom:8px; }
+    .cluster-type-badge.alignment { background:rgba(251,191,36,0.2); color:#92400e; border:1px solid rgba(251,191,36,0.4); }
+    .cluster-type-badge.conceptual { background:rgba(167,139,250,0.2); color:#5b21b6; border:1px solid rgba(167,139,250,0.4); }
+
+
+    /* ── Not-Ready workflow panel ───────────────────────────────────────────── */
+    .not-ready-panel {
+      display:none; padding:32px 28px; border-radius:var(--radius-lg);
+    }
+    .not-ready-panel.visible { display:block; }
+    .nrp-header {
+      display:flex; align-items:flex-start; gap:18px;
+      margin-bottom:28px; padding-bottom:24px; border-bottom:1px solid var(--glass-border);
+    }
+    .nrp-header-icon {
+      width:48px; height:48px; border-radius:14px; flex-shrink:0;
+      background:linear-gradient(135deg,rgba(68,107,149,0.16),rgba(40,64,91,0.10));
+      border:1px solid rgba(104,149,188,0.28);
+      display:grid; place-items:center;
+    }
+    .nrp-header-icon svg { width:22px; height:22px; stroke:var(--c-arctic); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .nrp-header h3 { margin:0 0 6px; font-size:17px; font-weight:700; color:var(--text-strong); }
+    .nrp-header p  { margin:0; font-size:13px; color:var(--text-muted); line-height:1.6; max-width:560px; }
+
+    /* ── Workflow steps ─────────────────────────────────────────────────────── */
+    .wf-steps { display:flex; flex-direction:column; gap:0; margin-bottom:24px; }
+    .wf-step {
+      display:flex; align-items:flex-start; gap:16px;
+      padding:13px 0; position:relative;
+    }
+    .wf-step:not(:last-child)::after {
+      content:''; position:absolute; left:15px; top:46px;
+      width:2px; height:calc(100% - 32px);
+      background:var(--glass-border);
+    }
+    .wf-step-icon {
+      width:32px; height:32px; border-radius:50%;
+      display:grid; place-items:center; flex-shrink:0; position:relative; z-index:1;
+    }
+    .wf-step.done .wf-step-icon    { background:linear-gradient(135deg,#34d399,#059669); }
+    .wf-step.current .wf-step-icon { background:linear-gradient(135deg,var(--c-ice),var(--c-arctic)); }
+    .wf-step.pending .wf-step-icon { background:rgba(208,223,235,0.35); border:1.5px solid var(--glass-border); }
+    .wf-step-icon svg { width:14px; height:14px; stroke:#fff; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .wf-step.pending .wf-step-icon svg { stroke:var(--c-powder); }
+    .wf-step-body { min-width:0; padding-top:5px; }
+    .wf-step-label { font-size:13px; font-weight:700; color:var(--text-strong); display:flex; align-items:center; gap:8px; }
+    .wf-step.pending .wf-step-label { color:var(--text-muted); }
+    .wf-step.current .wf-step-label { color:var(--c-arctic); }
+    .wf-step-now {
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+      padding:2px 8px; border-radius:5px;
+      background:rgba(104,149,188,0.15); color:var(--c-arctic);
+      border:1px solid rgba(104,149,188,0.3);
+    }
+    .wf-step-desc { font-size:12px; color:var(--text-muted); margin-top:3px; line-height:1.45; }
+    .wf-step.current .wf-step-desc { color:var(--text); }
+
+    /* ── Stage message box ──────────────────────────────────────────────────── */
+    .nrp-message {
+      padding:14px 18px; border-radius:12px;
+      background:rgba(68,107,149,0.07);
+      border:1px solid rgba(68,107,149,0.18);
+      border-left:3px solid var(--c-arctic);
+      font-size:13px; color:var(--text); line-height:1.65;
+      margin-bottom:18px;
+    }
+
+    /* ── Progress counters ──────────────────────────────────────────────────── */
+    .nrp-progress { display:flex; gap:24px; flex-wrap:wrap; align-items:center; }
+    .nrp-stat { display:flex; align-items:baseline; gap:6px; }
+    .nrp-stat-num { font-size:20px; font-weight:800; color:var(--text-strong); line-height:1; }
+    .nrp-stat-lbl { font-size:12px; color:var(--text-muted); }
+    .nrp-divider { width:1px; height:28px; background:var(--glass-border); }
+
+    /* ── Small sample notice ────────────────────────────────────────────────── */
+    .small-sample-notice {
+      display:flex; align-items:flex-start; gap:12px;
+      padding:12px 16px; border-radius:12px;
+      background:rgba(251,191,36,0.09);
+      border:1px solid rgba(251,191,36,0.28);
+      margin-bottom:18px;
+    }
+    .small-sample-notice svg { width:16px; height:16px; stroke:#d97706; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; margin-top:2px; }
+    .small-sample-notice p { margin:0; font-size:12.5px; color:#92400e; line-height:1.55; }
+    .small-sample-notice strong { display:block; font-weight:700; margin-bottom:2px; }
+
+    /* ── Processing / Failed state panels ───────────────────────────────────── */
+    .status-panel {
+      display:none; flex-direction:column; align-items:center; justify-content:center;
+      gap:14px; padding:52px 24px; border-radius:var(--radius-lg); text-align:center;
+    }
+    .status-panel.visible { display:flex; }
+    .status-spinner {
+      width:48px; height:48px; border-radius:50%;
+      border:3px solid rgba(104,149,188,0.25);
+      border-top-color:var(--c-arctic);
+      animation:spin 0.8s linear infinite;
+      flex-shrink:0;
+    }
+    .status-icon-wrap {
+      width:56px; height:56px; border-radius:16px;
+      display:grid; place-items:center; flex-shrink:0;
+    }
+    .status-icon-wrap svg { width:28px; height:28px; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+    .status-icon-wrap.warn { background:rgba(251,146,60,0.12); }
+    .status-icon-wrap.warn svg { stroke:rgba(234,88,12,0.9); }
+    .status-panel h3 { margin:0; font-size:16px; color:var(--text-strong); }
+    .status-panel p  { margin:0; font-size:13px; color:var(--text-muted); max-width:380px; line-height:1.6; }
+    .btn-retry {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 22px; border-radius:var(--radius-sm); border:none;
+      background:linear-gradient(135deg,var(--c-arctic),var(--c-midnight));
+      color:#fff; font-size:13px; font-weight:700; cursor:pointer;
+      transition:transform var(--t),box-shadow var(--t);
+      box-shadow:0 8px 24px rgba(68,107,149,0.28);
+    }
+    .btn-retry:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 32px rgba(40,64,91,0.22); }
+    .btn-retry:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+    .btn-retry svg { width:15px; height:15px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+
+    /* ── Heat levels ────────────────────────────────────────────────────────── */
+    .h0 { background:rgba(52,211,153,0.75);  color:#065f46; }
+    .h1 { background:rgba(134,239,172,0.65); color:#166534; }
+    .h2 { background:rgba(253,224,71,0.70);  color:#854d0e; }
+    .h3 { background:rgba(251,146,60,0.75);  color:#7c2d12; }
+    .h4 { background:rgba(251,113,133,0.80); color:#881337; }
+
+    /* ── Heatmap ────────────────────────────────────────────────────────────── */
+    .heatmap-wrap { overflow-x:auto; }
+    .heatmap { width:100%; border-collapse:separate; border-spacing:5px; min-width:560px; }
+    .heatmap thead th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); padding:4px 6px; text-align:center; }
+    .heatmap thead th.topic-col { text-align:left; min-width:140px; }
+    .heatmap tbody td { padding:0; border-radius:8px; text-align:center; font-size:13px; font-weight:700; height:42px; transition:transform 0.15s,box-shadow 0.15s; cursor:default; position:relative; }
+    .heatmap tbody td:first-child { font-size:13px; font-weight:600; color:var(--text-strong); text-align:left; padding:8px 10px; background:transparent !important; cursor:default; }
+    .heatmap tbody td:hover:not(:first-child) { transform:scale(1.06); box-shadow:0 4px 14px rgba(40,64,91,0.18); z-index:2; }
+    .heatmap tbody td[data-tip]:not(:first-child):hover::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:rgba(10,28,52,0.90); color:rgba(255,255,255,0.92); font-size:11px; font-weight:600; padding:5px 9px; border-radius:7px; white-space:nowrap; pointer-events:none; z-index:10; }
+    .heatmap-legend { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; }
+    .heatmap-legend .leg-swatch { width:18px; height:18px; border-radius:5px; }
+    .heatmap-legend .leg-label { margin-right:8px; }
+
+    /* ── Chart ──────────────────────────────────────────────────────────────── */
+    .chart-canvas-wrap { position:relative; height:300px; }
+
+    /* ── Sticky priorities panel ─────────────────────────────────────────────── */
+    .sticky-priorities-panel {
+      position:sticky;
+      top:20px;
+      padding:18px 20px;
+      border-radius:var(--radius-lg);
+      background:rgba(255,255,255,0.36);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px);
+    }
+    .sticky-panel-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+    .sticky-panel-head h3 { margin:0; font-size:14px; font-weight:700; color:var(--text-strong); }
+    .sticky-panel-head p  { margin:0; font-size:11px; color:var(--text-muted); }
+    .sticky-priority-item {
+      display:flex; align-items:flex-start; gap:10px;
+      padding:10px 12px;
+      border-radius:10px;
+      background:rgba(255,255,255,0.24);
+      border:1px solid var(--glass-border);
+      margin-bottom:8px;
+      transition:background var(--t);
+    }
+    .sticky-priority-item:last-child { margin-bottom:0; }
+    .sticky-priority-item:hover { background:rgba(255,255,255,0.38); }
+    .sticky-rank {
+      width:22px; height:22px; border-radius:6px; flex-shrink:0;
+      display:grid; place-items:center; font-size:11px; font-weight:800; color:#fff;
+    }
+    .sticky-rank.r1 { background:linear-gradient(135deg,#fb7185,#f43f5e); }
+    .sticky-rank.r2 { background:linear-gradient(135deg,#fb923c,#ea580c); }
+    .sticky-rank.r3 { background:linear-gradient(135deg,#fbbf24,#d97706); color:#7c2d12; }
+    .sticky-rank.rn { background:rgba(148,163,184,0.4); color:var(--text-muted); }
+    .sticky-priority-body { min-width:0; }
+    .sticky-priority-body strong { display:block; font-size:12px; font-weight:700; color:var(--text-strong); line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sticky-priority-body span   { font-size:11px; color:var(--text-muted); line-height:1.3; display:block; margin-top:2px; }
+    .sticky-empty { font-size:12px; color:var(--text-muted); font-style:italic; padding:4px 0; }
+    .sticky-divider { height:1px; background:var(--glass-border); margin:12px 0; }
+    .sticky-note { font-size:11px; color:var(--text-muted); line-height:1.5; }
+
+    /* ── Model transparency ─────────────────────────────────────────────────── */
+    .transparency-row { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+    .transparency-item { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); }
+    .transparency-item svg { width:14px; height:14px; stroke:var(--c-powder); fill:none; stroke-width:2; flex-shrink:0; }
+
+    /* ── AI error notice ────────────────────────────────────────────────────── */
+    .ai-error-notice { padding:10px 14px; border-radius:10px; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.35); font-size:12.5px; color:#92400e; margin-bottom:14px; }
+
+    /* ── Descriptive label ──────────────────────────────────────────────────── */
+    .descriptive-note { font-size:11.5px; color:var(--text-muted); font-style:italic; margin-top:6px; }
+
+    /* ── Spin animation ─────────────────────────────────────────────────────── */
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Responsive ─────────────────────────────────────────────────────────── */
+    @media (max-width:1100px) {
+      .results-layout { grid-template-columns:1fr; }
+      .sticky-priorities-panel { display:none; }
+    }
+    @media (max-width:980px) { .app { grid-template-columns:1fr; } .sidebar { display:none; } }
+    @media (max-width:640px) {
+      .exec-banner { flex-direction:column; }
+      .impact-grid { grid-template-columns:1fr; }
+      .focus-strip { flex-direction:column; align-items:flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ════════════ SIDEBAR ════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html" data-page="dashboard">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html" data-page="manage-exams">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html" data-page="rubrics">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html" data-page="answer-files">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html" data-page="auto-grading">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html" data-page="results-reviews">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html" data-page="analytics">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html" class="active" data-page="learning-gaps">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html" data-page="archive">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html" data-page="profile">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════ MAIN ════════════ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div class="topbar-left">
+        <h2>Learning Gap Analytics</h2>
+        <div class="breadcrumb">Insights &rsaquo; Learning Gap Analytics</div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="chip-avatar" id="chipAvatar">DA</div>
+          <span id="chipName">Instructor</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exam Selector -->
+    <div class="exam-selector-wrap glass lift">
+      <div class="selector-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Select Exam
+      </div>
+      <select class="exam-select" id="examSelect">
+        <option value="">— Choose an exam —</option>
+      </select>
+      <button class="btn-load" id="btnAnalyse" onclick="loadGaps()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        View Analysis
+      </button>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state glass">
+      <div class="empty-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+      <h3>No Exam Selected</h3>
+      <p>Choose a graded exam above to view the instructional gap analysis.</p>
+    </div>
+
+    <!-- Processing State -->
+    <div id="processing-state" class="status-panel glass">
+      <div class="status-spinner"></div>
+      <h3>Generating Learning Gap Insights…</h3>
+      <p>Qwen is analysing section-level performance data.<br>This usually completes within a few seconds after grading.</p>
+    </div>
+
+    <!-- Not-Ready State: workflow gate -->
+    <div id="not-ready-state" class="not-ready-panel glass">
+
+      <!-- Header -->
+      <div class="nrp-header">
+        <div class="nrp-header-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <h3>Learning Insights Pending</h3>
+          <p>Final learning gap analysis is derived from fully reviewed and approved assessment outcomes. Complete the grading workflow below to unlock this section.</p>
+        </div>
+      </div>
+
+      <!-- 4-step workflow progress -->
+      <div class="wf-steps" id="wf-steps">
+        <!-- steps injected by _renderNotReadyPanel() -->
+      </div>
+
+      <!-- Stage-specific guidance message -->
+      <div class="nrp-message" id="nrp-message"></div>
+
+      <!-- Progress counters (stages 2+) -->
+      <div class="nrp-progress" id="nrp-progress"></div>
+
+    </div>
+
+    <!-- Failed State -->
+    <div id="failed-state" class="status-panel glass">
+      <div class="status-icon-wrap warn">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <h3>Analysis Could Not Be Generated</h3>
+      <p>Gap analysis could not be generated automatically.<br>This may be a temporary issue. Click below to retry.</p>
+      <button class="btn-retry" id="btnRetry" onclick="retryAnalysis()">
+        <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        Retry Analysis
+      </button>
+    </div>
+
+    <!-- ════ RESULTS ════ -->
+    <div id="gap-results">
+
+      <!-- Exam badge row -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <span class="pill blue" style="font-size:13px;padding:7px 14px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span id="exam-title-badge">—</span>
+        </span>
+        <span style="font-size:12px;color:var(--text-muted);">Report generated <span id="report-date"></span></span>
+        <span style="font-size:12px;color:var(--text-muted);" id="student-count-badge"></span>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════════════════
+           LEVEL 1 — At a Glance
+      ═══════════════════════════════════════════════════════════════════════ -->
+      <div class="level-label">At a Glance</div>
+
+      <!-- 3-stat snapshot strip -->
+      <div class="exec-banner" id="exec-banner">
+        <div class="exec-stat">
+          <div class="exec-stat-icon critical">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="exec-stat-body">
+            <div class="exec-stat-num" id="stat-critical">0</div>
+            <div class="exec-stat-lbl">Critical Topics</div>
+            <div class="exec-stat-interp" id="stat-critical-interp">Below 40% average — reteaching recommended.</div>
+          </div>
+        </div>
+        <div class="exec-stat">
+          <div class="exec-stat-icon info">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="exec-stat-body">
+            <div class="exec-stat-num" id="stat-avg">—</div>
+            <div class="exec-stat-lbl">Section Average</div>
+            <div class="exec-stat-interp" id="stat-avg-interp">Awaiting data.</div>
+          </div>
+        </div>
+        <div class="exec-stat">
+          <div class="exec-stat-icon gain">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="exec-stat-body">
+            <div class="exec-stat-num" id="stat-weakness-type" style="font-size:15px;line-height:1.3;margin-top:2px;">—</div>
+            <div class="exec-stat-lbl">Most Common Gap Type</div>
+            <div class="exec-stat-interp" id="stat-weakness-type-interp">Awaiting data.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommended Focus Distribution strip -->
+      <div class="focus-strip glass" id="focus-strip">
+        <span class="focus-strip-label">Weakness Type Breakdown</span>
+        <div class="focus-items" id="focus-items">
+          <span class="focus-empty">Loading…</span>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════════════════
+           Two-column layout: main content + sticky priorities panel
+      ═══════════════════════════════════════════════════════════════════════ -->
+      <div class="results-layout">
+
+        <!-- ── Left: main content ──────────────────────────────────────────── -->
+        <div class="results-main">
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               LEVEL 2 — Teaching Action Layer
+          ════════════════════════════════════════════════════════════════════ -->
+          <div class="level-label">Teaching Actions</div>
+
+          <!-- Recommended Teaching Actions -->
+          <div class="section-card glass" id="interventions-card">
+            <div class="section-head">
+              <div class="section-title">
+                <div class="section-icon blue">
+                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                  <h3>Teaching Recommendations</h3>
+                  <p>Suggested focus areas based on observed gaps — instructor judgement applies</p>
+                </div>
+              </div>
+            </div>
+            <div class="intervention-grid" id="intervention-grid"></div>
+          </div>
+
+          <!-- Priority Weakness Table -->
+          <div class="section-card glass">
+            <div class="section-head">
+              <div class="section-title">
+                <div class="section-icon rose">
+                  <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </div>
+                <div>
+                  <h3>Priority Weakness Table</h3>
+                  <p>Ranked by severity and student impact — instructor action queue</p>
+                </div>
+              </div>
+            </div>
+            <div class="priority-table-wrap">
+              <table class="priority-table" id="priority-table">
+                <thead>
+                  <tr>
+                    <th style="width:44px;">Priority</th>
+                    <th>Topic</th>
+                    <th>Severity</th>
+                    <th>% Students Affected</th>
+                    <th>Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody id="priority-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Instructional Impact Estimator -->
+
+                <!-- Topic Weakness Chart -->
+                <div class="section-card glass">
+                  <div class="section-head">
+                    <div class="section-title">
+                      <div class="section-icon rose">
+                        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      </div>
+                      <div>
+                        <h3>Topic Weakness Chart</h3>
+                        <p>Average score per topic, sorted weakest to strongest</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="chart-canvas-wrap">
+                    <canvas id="weaknessChart"></canvas>
+                  </div>
+                </div>
+
+                <!-- Score Distribution Overview (Heatmap) -->
+                <div class="section-card glass">
+                  <div class="section-head">
+                    <div class="section-title">
+                      <div class="section-icon slate">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                      </div>
+                      <div>
+                        <h3>Score Distribution Overview</h3>
+                        <p>Descriptive visualization of student score spread per topic — not diagnostic</p>
+                      </div>
+                    </div>
+                    <div class="heatmap-legend">
+                      <div class="leg-swatch h4"></div><span class="leg-label">0–20</span>
+                      <div class="leg-swatch h3"></div><span class="leg-label">21–40</span>
+                      <div class="leg-swatch h2"></div><span class="leg-label">41–60</span>
+                      <div class="leg-swatch h1"></div><span class="leg-label">61–80</span>
+                      <div class="leg-swatch h0"></div><span class="leg-label">81–100</span>
+                    </div>
+                  </div>
+                  <div class="heatmap-wrap">
+                    <table class="heatmap" id="heatmapTable">
+                      <thead>
+                        <tr>
+                          <th class="topic-col">Topic</th>
+                          <th>0–20<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">Gap</span></th>
+                          <th>21–40<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">Weak</span></th>
+                          <th>41–60<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">Fair</span></th>
+                          <th>61–80<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">Good</span></th>
+                          <th>81–100<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">Strong</span></th>
+                          <th>Avg %</th>
+                        </tr>
+                      </thead>
+                      <tbody id="heatmapBody"></tbody>
+                    </table>
+                  </div>
+                  <p class="descriptive-note">This visualization is descriptive, not diagnostic. Use the Priority Table and Diagnostic Cards above for instructional decisions.</p>
+                </div>
+
+          <!-- Model Transparency Panel -->
+          <div class="section-card glass" style="padding:16px 22px;">
+            <div class="transparency-row">
+              <div class="transparency-item">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Analysis generated using <strong style="margin-left:4px;color:var(--text);">Qwen LLM</strong>
+              </div>
+              <div class="transparency-item">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Based on aggregated section-level performance only
+              </div>
+              <div class="transparency-item">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                No individual student data used or exposed
+              </div>
+              <div class="transparency-item">
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Recommendations are advisory — instructor judgement applies
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /results-main -->
+
+        <!-- ── Right: Sticky Priorities Panel ─────────────────────────────── -->
+        <div class="sticky-priorities-panel" id="sticky-priorities-panel">
+          <div class="sticky-panel-head">
+            <div class="section-icon rose">
+              <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div>
+              <h3>Top Teaching Priorities</h3>
+              <p>Highest-severity instructional targets</p>
+            </div>
+          </div>
+          <div id="sticky-priorities">
+            <span class="sticky-empty">No data yet.</span>
+          </div>
+          <div class="sticky-divider"></div>
+          <p class="sticky-note">These are derived automatically from the Priority Weakness Table and update when you change exam.</p>
+        </div>
+
+      </div><!-- /results-layout -->
+
+    </div><!-- /gap-results -->
+  </main>
+</div>
+
+<!-- Logout Modal -->
+<div id="logoutModal" style="display:none;position:fixed;inset:0;background:rgba(10,28,52,0.55);backdrop-filter:blur(6px);z-index:999;align-items:center;justify-content:center;">
+  <div class="glass" style="padding:32px 28px;border-radius:var(--radius-lg);max-width:360px;width:90%;text-align:center;">
+    <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#fb7185,#f43f5e);display:grid;place-items:center;margin:0 auto 16px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3 style="margin:0 0 8px;font-size:18px;">Sign Out?</h3>
+    <p style="margin:0 0 24px;font-size:13px;color:var(--text-muted);">You will be returned to the login screen.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button onclick="closeLogoutModal()" style="padding:10px 20px;border-radius:var(--radius-sm);border:1px solid var(--glass-border);background:rgba(255,255,255,0.22);color:var(--text-strong);font-weight:600;cursor:pointer;">Cancel</button>
+      <button onclick="doLogout()" style="padding:10px 20px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,#fb7185,#f43f5e);color:#fff;font-weight:700;cursor:pointer;">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<script>
+authGuard();
+
+document.getElementById('logoutTrigger').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('logoutModal').style.display = 'flex';
+});
+function closeLogoutModal() { document.getElementById('logoutModal').style.display = 'none'; }
+
+/* ── Profile chip ─────────────────────────────────────────────────────────── */
+(function() {
+  const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+  if (!p) return;
+  const av = document.getElementById('chipAvatar');
+  const nm = document.getElementById('chipName');
+  const parts = (p.fullName || p.email || '').trim().split(/\s+/);
+  const inits = parts.map(w => w[0]).filter(Boolean).join('').slice(0,2).toUpperCase() || '?';
+  const avUrl = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+  if (nm) nm.textContent = getDisplayName(p) || p.email || '';
+  if (av) {
+    av.innerHTML = avUrl
+      ? `<img src="${avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : inits;
+  }
+})();
+
+/* ── Constants ────────────────────────────────────────────────────────────── */
+const SEV_ORDER  = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, NONE: 0 };
+const SEV_WEIGHT = { CRITICAL: 1.0, HIGH: 0.75, MEDIUM: 0.5, LOW: 0.25, NONE: 0 };
+const ISSUE_LABELS = {
+  none:                        'No Gap',
+  recall_weakness:             'Recall Weakness',
+  procedural_misunderstanding: 'Procedural Error',
+  concept_confusion:           'Concept Confusion',
+  calculation_error:           'Calculation Error',
+  terminology_confusion:       'Terminology Confusion',
+  question_misinterpretation:  'Assessment Alignment',  // keep in sync with issueLabel overrides above
+};
+
+let chartInstance = null;
+
+/* ── Topic label extractor ────────────────────────────────────────────────── */
+function generateTopicLabel(questionText, qNum) {
+  if (!questionText) return 'Question ' + qNum;
+  let t = questionText.trim();
+  t = t.replace(/^(what\s+is\s+(the\s+)?|which\s+|how\s+(do|does|can|would)\s+|describe\s+the\s+|describe\s+|explain\s+(the\s+)?|define\s+the\s+|define\s+|list\s+(the\s+)?|identify\s+(the\s+)?|compare\s+|discuss\s+|analyze\s+|calculate\s+|determine\s+|state\s+|outline\s+|differentiate\s+between\s+)/i, '');
+  if (t.length > 52) {
+    t = t.slice(0, 52);
+    const ls = t.lastIndexOf(' ');
+    if (ls > 18) t = t.slice(0, ls);
+  }
+  t = t.replace(/[?!:,;.]+$/, '').trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/* ── Heat class ───────────────────────────────────────────────────────────── */
+function heatClass(avg) {
+  if (avg >= 81) return 'h0';
+  if (avg >= 61) return 'h1';
+  if (avg >= 41) return 'h2';
+  if (avg >= 21) return 'h3';
+  return 'h4';
+}
+
+/* ── Bar colour ───────────────────────────────────────────────────────────── */
+function barColor(avg) {
+  if (avg >= 81) return { bg:'rgba(52,211,153,0.75)',  border:'rgba(16,185,129,0.95)' };
+  if (avg >= 61) return { bg:'rgba(104,149,188,0.80)', border:'rgba(68,107,149,0.95)' };
+  if (avg >= 41) return { bg:'rgba(251,191,36,0.75)',  border:'rgba(245,158,11,0.95)' };
+  if (avg >= 21) return { bg:'rgba(251,146,60,0.75)',  border:'rgba(234,88,12,0.95)'  };
+  return               { bg:'rgba(251,113,133,0.80)', border:'rgba(244,63,94,0.95)'  };
+}
+
+/* ── HTML escape ──────────────────────────────────────────────────────────── */
+function _e(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* ── Init: populate exam dropdown ────────────────────────────────────────── */
+function _examLabel(ex) {
+  return ex.name + (ex.section ? ' \u2014 ' + ex.section : '') + (ex.isArchived ? ' \u00b7 Archived' : '');
+}
+
+async function init() {
+  try {
+    const [active, archived] = await Promise.all([
+      apiFetch('/exams/'),
+      apiFetch('/exams/?archived=true'),
+    ]);
+    // Merge: active first, then archived. Deduplicate by id just in case.
+    const seen = new Set();
+    const all  = [...active, ...archived].filter(ex => {
+      if (seen.has(ex.id)) return false;
+      seen.add(ex.id);
+      return true;
+    });
+
+    const sel = document.getElementById('examSelect');
+    sel.innerHTML = '<option value="">— Choose an exam —</option>';
+    all.forEach(ex => {
+      const o = document.createElement('option');
+      o.value       = ex.id;
+      o.textContent = _examLabel(ex);
+      sel.appendChild(o);
+    });
+
+    const examId = new URLSearchParams(window.location.search).get('exam');
+    if (examId) {
+      const match = Array.from(sel.options).find(o => String(o.value) === String(examId));
+      if (match) {
+        sel.value = match.value;
+        loadGaps();
+      }
+    }
+  } catch (err) { console.error('Failed to load exams:', err); }
+}
+
+/* ── State visibility helpers ─────────────────────────────────────────────── */
+let _pollTimer = null;
+let _currentExamId = null;
+
+function _showState(which) {
+  document.getElementById('empty-state').style.display      = which === 'empty'      ? 'flex'  : 'none';
+  document.getElementById('processing-state').classList.toggle('visible', which === 'processing');
+  document.getElementById('not-ready-state').classList.toggle('visible', which === 'not_ready');
+  document.getElementById('failed-state').classList.toggle('visible',     which === 'failed');
+  document.getElementById('gap-results').style.display      = which === 'results'    ? 'block' : 'none';
+}
+
+function _stopPolling() {
+  if (_pollTimer !== null) { clearInterval(_pollTimer); _pollTimer = null; }
+}
+
+/* ── Render ready result ──────────────────────────────────────────────────── */
+function _renderReady(analysis) {
+  const { exam_name, exam_section, n_students, question_stats, gap_report, error, small_sample } = analysis;
+
+  document.getElementById('exam-title-badge').textContent =
+    exam_name + (exam_section && exam_section !== '—' ? ' — ' + exam_section : '');
+  document.getElementById('report-date').textContent =
+    new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('student-count-badge').textContent =
+    n_students + ' student' + (n_students !== 1 ? 's' : '') + ' approved';
+
+  _showState('results');
+
+  // Small-sample notice: shown when fewer than 5 approved results exist
+  const existingNotice = document.getElementById('small-sample-notice');
+  if (existingNotice) existingNotice.remove();
+  if (small_sample && n_students > 0) {
+    const notice = document.createElement('div');
+    notice.id = 'small-sample-notice';
+    notice.className = 'small-sample-notice';
+    notice.innerHTML = `
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p>
+        <strong>Limited Dataset Notice</strong>
+        This analysis reflects ${n_students} approved student ${n_students === 1 ? 'result' : 'results'}.
+        Patterns identified may not be representative of the full class.
+        Additional approved results will improve the reliability of these insights.
+      </p>`;
+    // Insert after the exam badge row, before the level label
+    const gapResults = document.getElementById('gap-results');
+    const badgeRow   = gapResults.firstElementChild;
+    badgeRow.insertAdjacentElement('afterend', notice);
+  }
+
+  renderAll(gap_report, question_stats, n_students, error);
+}
+
+/* ── Handle a single status response ─────────────────────────────────────── */
+function _handleStatusResponse(data) {
+  const { status } = data;
+  if (status === 'ready') {
+    _stopPolling();
+    _setBtnLoading(false);
+    _renderReady(data.analysis);
+  } else if (status === 'processing') {
+    _showState('processing');
+    _startPolling(_currentExamId);
+  } else if (status === 'not_ready') {
+    // Workflow gate: grading not complete or grades not yet approved.
+    // Do NOT poll — the instructor must take action before retrying.
+    _stopPolling();
+    _setBtnLoading(false);
+    _showState('not_ready');
+    _renderNotReadyPanel(data.readiness || {});
+  } else {
+    _stopPolling();
+    _setBtnLoading(false);
+    _showState('failed');
+  }
+}
+
+/* ── Polling ──────────────────────────────────────────────────────────────── */
+function _startPolling(examId) {
+  if (_pollTimer !== null) return;
+  _pollTimer = setInterval(async () => {
+    if (!examId) { _stopPolling(); return; }
+    try {
+      const data = await apiFetch('/gap-analysis/' + examId);
+      if (data.status !== 'processing') {
+        _stopPolling();
+        _setBtnLoading(false);
+        _handleStatusResponse(data);
+      }
+    } catch (err) {
+      console.error('[gap-poll] error:', err);
+      _stopPolling();
+      _setBtnLoading(false);
+      _showState('failed');
+    }
+  }, 2000);
+}
+
+/* ── Button loading state ─────────────────────────────────────────────────── */
+function _setBtnLoading(loading) {
+  const btn    = document.getElementById('btnAnalyse');
+  const btnSvg = btn.querySelector('svg');
+  if (loading) {
+    btn.disabled = true;
+    btnSvg.style.display = 'none';
+    if (!document.getElementById('btn-spinner')) {
+      btn.insertAdjacentHTML('afterbegin',
+        '<span id="btn-spinner" style="width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0;"></span>');
+    }
+  } else {
+    btn.disabled = false;
+    const sp = document.getElementById('btn-spinner');
+    if (sp) sp.remove();
+    btnSvg.style.display = '';
+  }
+}
+
+/* ── Load analysis ────────────────────────────────────────────────────────── */
+async function loadGaps() {
+  const examId = parseInt(document.getElementById('examSelect').value, 10);
+  if (!examId) {
+    _stopPolling();
+    _showState('empty');
+    return;
+  }
+
+  _stopPolling();
+  _currentExamId = examId;
+  _setBtnLoading(true);
+  _showState('empty');
+
+  try {
+    const data = await apiFetch('/gap-analysis/' + examId);
+    _handleStatusResponse(data);
+  } catch (err) {
+    console.error('Gap analysis error:', err);
+    _setBtnLoading(false);
+    _showState('failed');
+  }
+}
+
+/* ── Retry analysis ───────────────────────────────────────────────────────── */
+async function retryAnalysis() {
+  const examId = _currentExamId;
+  if (!examId) return;
+
+  _stopPolling();
+  const retryBtn = document.getElementById('btnRetry');
+  if (retryBtn) { retryBtn.disabled = true; retryBtn.textContent = 'Retrying…'; }
+  _setBtnLoading(true);
+
+  try {
+    const data = await apiFetch('/gap-analysis/' + examId + '/retry', { method: 'POST' });
+    _handleStatusResponse(data);
+  } catch (err) {
+    console.error('Retry error:', err);
+    _setBtnLoading(false);
+    _showState('failed');
+  } finally {
+    if (retryBtn) {
+      retryBtn.disabled = false;
+      retryBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg> Retry Analysis';
+    }
+  }
+}
+
+/* ── Not-Ready workflow panel renderer ────────────────────────────────────── */
+function _renderNotReadyPanel(readiness) {
+  const stage         = readiness.stage         || 1;
+  const gradedCount   = readiness.graded_count  || 0;
+  const studentCount  = readiness.student_count || 0;
+  const approvedCount = readiness.approved_count || 0;
+
+  // SVG icon fragments
+  const CHECK_SVG   = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+  const UPLOAD_SVG  = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+  const GRADE_SVG   = '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+  const REVIEW_SVG  = '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  const INSIGHT_SVG = '<svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+  const PENDING_SVG = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+  // Determine state of each step: 'done' | 'current' | 'pending'
+  function stepState(n) {
+    if (n < stage) return 'done';
+    if (n === stage) return 'current';
+    return 'pending';
+  }
+
+  const steps = [
+    {
+      n: 1,
+      icon: stepState(1) === 'done' ? CHECK_SVG : UPLOAD_SVG,
+      label: 'Student Papers Uploaded',
+      desc: {
+        done:    'Answer files are uploaded and ready for processing.',
+        current: 'Upload student answer PDFs in the Answer Files section to begin.',
+        pending: 'Awaiting file upload.',
+      },
+    },
+    {
+      n: 2,
+      icon: stepState(2) === 'done' ? CHECK_SVG : GRADE_SVG,
+      label: 'AI Grading Complete',
+      desc: {
+        done:    `All ${gradedCount} student papers have been assessed.`,
+        current: gradedCount > 0
+          ? `${gradedCount} of ${studentCount} student papers graded — processing underway.`
+          : 'Run Auto-Grading from the grading workflow to assess student responses.',
+        pending: 'Grading will run once papers are uploaded.',
+      },
+    },
+    {
+      n: 3,
+      icon: stepState(3) === 'done' ? CHECK_SVG : REVIEW_SVG,
+      label: 'Instructor Review & Approval',
+      desc: {
+        done:    'All results reviewed and approved.',
+        current: approvedCount > 0
+          ? `${approvedCount} of ${gradedCount} results approved — visit Results Review to complete.`
+          : 'Open the Results Review section to review and approve each student result.',
+        pending: 'Review will become available after grading is complete.',
+      },
+    },
+    {
+      n: 4,
+      icon: stepState(4) === 'done' ? CHECK_SVG : INSIGHT_SVG,
+      label: 'Learning Insights Ready',
+      desc: {
+        done:    'Post-assessment analytics are available.',
+        current: 'Analysis is being generated.',
+        pending: 'Insights will be unlocked once all prior steps are complete.',
+      },
+    },
+  ];
+
+  const stepsEl = document.getElementById('wf-steps');
+  stepsEl.innerHTML = steps.map(s => {
+    const st    = stepState(s.n);
+    const desc  = s.desc[st] || '';
+    const badge = st === 'current' ? '<span class="wf-step-now">In Progress</span>' : '';
+    return `
+      <div class="wf-step ${st}">
+        <div class="wf-step-icon">${s.icon}</div>
+        <div class="wf-step-body">
+          <div class="wf-step-label">${_e(s.label)}${badge}</div>
+          <div class="wf-step-desc">${_e(desc)}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Stage-specific guidance message
+  const messages = {
+    1: 'Upload student answer files and run auto-grading to begin the assessment workflow. Learning gap insights will become available once grading is complete and all results are reviewed and approved.',
+    2: gradedCount === 0
+      ? 'AI grading is currently in progress. Once complete, please review each student result in the Results Review section and approve final grades before learning insights are generated.'
+      : 'Grading is underway for this exam. Ensure all student papers have been processed, then proceed to the instructor review step.',
+    3: 'All student papers have been graded. To unlock learning insights, visit the Results Review section and approve the final grades. Insights will become available once all results are confirmed.',
+  };
+  document.getElementById('nrp-message').textContent = messages[stage] || '';
+
+  // Progress counters
+  const progressEl = document.getElementById('nrp-progress');
+  progressEl.innerHTML = '';
+  if (stage >= 2 && studentCount > 0) {
+    progressEl.innerHTML = `
+      <div class="nrp-stat">
+        <span class="nrp-stat-num">${gradedCount}</span>
+        <span class="nrp-stat-lbl">of ${studentCount} papers graded</span>
+      </div>
+      ${stage >= 3 && gradedCount > 0 ? `
+        <div class="nrp-divider"></div>
+        <div class="nrp-stat">
+          <span class="nrp-stat-num">${approvedCount}</span>
+          <span class="nrp-stat-lbl">of ${gradedCount} results approved</span>
+        </div>` : ''}`;
+  }
+}
+
+/* ── Master render ────────────────────────────────────────────────────────── */
+function renderAll(gapReport, questionStats, nStudents, llmError) {
+  const questions = gapReport?.questions || [];
+
+  const qStatMap = {};
+  (questionStats || []).forEach(s => { qStatMap[s.question_number] = s; });
+
+  const topicMap = {};
+  (questionStats || []).forEach(s => {
+    topicMap[s.question_number] = generateTopicLabel(s.question_text, s.question_number);
+  });
+
+  // Level 1
+  renderExecBanner(questions, questionStats, nStudents);
+  renderFocusDistribution(questions);
+
+  // Level 2
+  renderInterventions(questions, qStatMap, topicMap);
+  renderPriorityTable(questions, qStatMap, topicMap, nStudents);
+
+  // Sticky panel — uses the same sorted rows as priority table
+  updateStickyPanel(questions, qStatMap, topicMap, nStudents);
+
+  const topics = (questionStats || []).map(q => ({
+    name:  topicMap[q.question_number] || ('Q' + q.question_number),
+    bands: [q.band_0_20, q.band_21_40, q.band_41_60, q.band_61_80, q.band_81_100],
+    avg:   Math.round(q.class_average_pct),
+    qnum:  q.question_number,
+  }));
+  buildHeatmap(topics);
+  renderChart(topics);
+
+  // Show AI error notice if needed
+  if (llmError) {
+    const notice = document.createElement('div');
+    notice.className = 'ai-error-notice';
+    notice.style.marginBottom = '16px';
+    notice.textContent = 'AI analysis unavailable — statistical data only. Ensure QWEN_API_KEY is set in backend/.env.';
+    const firstCard = document.querySelector('#gap-results .section-card');
+    if (firstCard) firstCard.parentNode.insertBefore(notice, firstCard);
+  }
+}
+
+/* ── Executive Snapshot banner ────────────────────────────────────────────── */
+function renderExecBanner(questions, questionStats, nStudents) {
+  const critical   = questions.filter(q => q.severity === 'CRITICAL').length;
+  const totalQs    = questions.length || 1;
+  const allAvgs    = (questionStats || []).map(s => s.class_average_pct).filter(v => v != null);
+  const sectionAvg = allAvgs.length ? Math.round(allAvgs.reduce((a,b) => a+b, 0) / allAvgs.length) : null;
+
+  document.getElementById('stat-critical').textContent = critical;
+  document.getElementById('stat-avg').textContent      = sectionAvg !== null ? sectionAvg + '%' : '—';
+
+  // Card 1 interpretation — add "Affects X% of assessed topics" when critical > 0
+  const critInterp = document.getElementById('stat-critical-interp');
+  if (critInterp) {
+    const critPct = Math.round(critical / totalQs * 100);
+    const affectsLine = critical > 0
+      ? `<br>Affects ${critPct}% of assessed topics.`
+      : '';
+    critInterp.innerHTML =
+      'Students scored below 40% on these topics.<br>Reteaching may be beneficial.' + affectsLine;
+  }
+
+  // Card 2 interpretation — benchmark comparison at 70%
+  const avgInterp = document.getElementById('stat-avg-interp');
+  if (avgInterp && sectionAvg !== null) {
+    if (sectionAvg < 70) {
+      avgInterp.className = 'exec-stat-interp below';
+      avgInterp.textContent = 'Below the 70% benchmark. Consider reviewing weak areas.';
+    } else {
+      avgInterp.className = 'exec-stat-interp above';
+      avgInterp.textContent = 'At or above the 70% benchmark. Overall performance is satisfactory.';
+    }
+  }
+
+  // Card 3 — dominant gap type across questions with detected gaps
+  const gapped = questions.filter(q => q.gap_detected && q.severity !== 'NONE');
+  const typeEl     = document.getElementById('stat-weakness-type');
+  const typeInterp = document.getElementById('stat-weakness-type-interp');
+  if (typeEl) {
+    if (!gapped.length) {
+      typeEl.textContent     = 'None';
+      if (typeInterp) typeInterp.textContent = 'No significant gaps detected.';
+    } else {
+      const typeCounts = {};
+      gapped.forEach(q => {
+        const t = q.issue_type || 'none';
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+      });
+      const dominant = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0][0];
+      typeEl.textContent = ISSUE_LABELS[dominant] || dominant;
+      if (typeInterp) {
+        const pct = Math.round(typeCounts[dominant] / gapped.length * 100);
+        typeInterp.textContent = `Present in ${pct}% of topics with detected gaps.`;
+      }
+    }
+  }
+}
+
+/* ── Recommended Focus Distribution strip ─────────────────────────────────── */
+function renderFocusDistribution(questions) {
+  const container = document.getElementById('focus-items');
+  container.innerHTML = '';
+
+  const gapped = questions.filter(q => q.gap_detected && q.severity !== 'NONE');
+  if (!gapped.length) {
+    container.innerHTML = '<span class="focus-empty">No significant gaps detected — distribution unavailable.</span>';
+    return;
+  }
+
+  const buckets = {
+    'Recall Weaknesses': ['recall_weakness', 'terminology_confusion', 'calculation_error'],
+    'Concept Confusion': ['concept_confusion', 'procedural_misunderstanding'],
+    'Alignment Issues':  ['question_misinterpretation'],
+  };
+
+  const interpretations = {
+    'Recall Weaknesses': 'Students struggle to remember definitions or terminology.',
+    'Concept Confusion': 'Students mix related concepts across domains.',
+    'Alignment Issues':  'Assessment content may not match intended learning outcomes.',
+    'Other':             'Miscellaneous gap types detected.',
+  };
+
+  const counts = {};
+  for (const label of Object.keys(buckets)) counts[label] = 0;
+  counts['Other'] = 0;
+
+  gapped.forEach(q => {
+    const issue = q.issue_type || 'none';
+    let matched = false;
+    for (const [label, types] of Object.entries(buckets)) {
+      if (types.includes(issue)) { counts[label]++; matched = true; break; }
+    }
+    if (!matched) counts['Other']++;
+  });
+
+  const total = gapped.length;
+  const colors = {
+    'Recall Weaknesses': 'rgba(251,146,60,0.85)',
+    'Concept Confusion': 'rgba(167,139,250,0.85)',
+    'Alignment Issues':  'rgba(251,191,36,0.85)',
+    'Other':             'rgba(148,163,184,0.7)',
+  };
+
+  const sorted = Object.entries(counts)
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  sorted.forEach(([label, count]) => {
+    const pct    = Math.round(count / total * 100);
+    const color  = colors[label] || colors['Other'];
+    const interp = interpretations[label] || '';
+    const item   = document.createElement('div');
+    item.className = 'focus-item';
+    item.innerHTML = `
+      <div class="focus-item-row">
+        <span class="focus-item-name">${_e(label)}</span>
+        <div class="focus-item-bar-wrap">
+          <div class="focus-item-bar" style="width:${pct}%;background:${color};"></div>
+        </div>
+        <span class="focus-item-pct">${pct}%</span>
+      </div>
+      ${interp ? `<div class="focus-item-interp">${_e(interp)}</div>` : ''}`;
+    container.appendChild(item);
+  });
+}
+
+/* ── Sticky priorities panel ──────────────────────────────────────────────── */
+function updateStickyPanel(questions, qStatMap, topicMap, nStudents) {
+  const el = document.getElementById('sticky-priorities');
+  el.innerHTML = '';
+
+  const rows = [...questions]
+    .filter(q => q.severity !== 'NONE')
+    .map(q => {
+      const stat   = qStatMap[q.question_number] || {};
+      const affPct = nStudents > 0
+        ? Math.round(((stat.band_0_20 || 0) + (stat.band_21_40 || 0)) / nStudents * 100)
+        : 0;
+      return { q, affPct, topic: topicMap[q.question_number] || ('Q' + q.question_number) };
+    })
+    .sort((a, b) => {
+      const d = (SEV_ORDER[b.q.severity] || 0) - (SEV_ORDER[a.q.severity] || 0);
+      return d !== 0 ? d : b.affPct - a.affPct;
+    })
+    .slice(0, 3);
+
+  if (!rows.length) {
+    el.innerHTML = '<span class="sticky-empty">No significant weaknesses detected.</span>';
+    return;
+  }
+
+  rows.forEach(({ q, affPct, topic }, idx) => {
+    const rankClass = idx === 0 ? 'r1' : idx === 1 ? 'r2' : 'r3';
+    const item = document.createElement('div');
+    item.className = 'sticky-priority-item';
+    item.innerHTML = `
+      <div class="sticky-rank ${rankClass}">${idx + 1}</div>
+      <div class="sticky-priority-body">
+        <strong title="${_e(topic)}">${_e(topic)}</strong>
+        <span><span class="sev-pill sev-${q.severity}" style="font-size:10px;padding:1px 6px;">${q.severity}</span> &nbsp;${affPct}% affected</span>
+      </div>`;
+    el.appendChild(item);
+  });
+}
+
+/* ── Recommended Teaching Actions ────────────────────────────────────────── */
+function renderInterventions(questions, qStatMap, topicMap) {
+  const grid = document.getElementById('intervention-grid');
+  grid.innerHTML = '';
+
+  const ranked = [...questions]
+    .filter(q => q.intervention && (q.severity === 'CRITICAL' || q.severity === 'HIGH' || q.severity === 'MEDIUM'))
+    .sort((a, b) => (SEV_ORDER[b.severity] || 0) - (SEV_ORDER[a.severity] || 0));
+
+  const seen = new Set();
+  const unique = [];
+  for (const q of ranked) {
+    const key = q.intervention.trim().slice(0, 60);
+    if (!seen.has(key)) { seen.add(key); unique.push(q); }
+    if (unique.length === 3) break;
+  }
+
+  if (!unique.length) {
+    grid.innerHTML = '<p style="font-size:13px;color:var(--text-muted);padding:8px 0;">No targeted interventions available — AI analysis may be incomplete.</p>';
+    return;
+  }
+
+  unique.forEach((q, i) => {
+    const topic = topicMap[q.question_number] || ('Q' + q.question_number);
+    const card  = document.createElement('div');
+    card.className = 'intervention-card';
+    card.innerHTML = `
+      <div class="intervention-num">${i + 1}</div>
+      <div class="intervention-body">
+        <strong>${_e(q.intervention)}</strong>
+        <span>Addresses: <em>${_e(topic)}</em> — <span class="sev-pill sev-${q.severity}" style="font-size:10px;padding:1px 7px;">${q.severity}</span></span>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+/* ── Priority Weakness Table ──────────────────────────────────────────────── */
+function renderPriorityTable(questions, qStatMap, topicMap, nStudents) {
+  const tbody = document.getElementById('priority-tbody');
+  tbody.innerHTML = '';
+
+  const rows = [...questions]
+    .filter(q => q.severity !== 'NONE')
+    .map(q => {
+      const stat    = qStatMap[q.question_number] || {};
+      const affected = ((stat.band_0_20 || 0) + (stat.band_21_40 || 0));
+      const affPct  = nStudents > 0 ? Math.round(affected / nStudents * 100) : 0;
+      return { q, stat, affPct, topic: topicMap[q.question_number] || ('Q' + q.question_number) };
+    })
+    .sort((a, b) => {
+      const sevDiff = (SEV_ORDER[b.q.severity] || 0) - (SEV_ORDER[a.q.severity] || 0);
+      return sevDiff !== 0 ? sevDiff : b.affPct - a.affPct;
+    });
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;font-size:13px;color:var(--text-muted);padding:20px;">No significant weaknesses detected.</td></tr>';
+    return;
+  }
+
+  rows.forEach(({ q, affPct, topic }, idx) => {
+    const rankClass = idx === 0 ? 'r1' : idx === 1 ? 'r2' : idx === 2 ? 'r3' : 'rn';
+    const barW   = Math.min(affPct, 100);
+    const barCol = affPct >= 70 ? '#f43f5e' : affPct >= 40 ? '#fb923c' : '#fbbf24';
+    const rec    = q.intervention ? q.intervention.slice(0, 100) + (q.intervention.length > 100 ? '…' : '') : '—';
+    const tr     = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="rank-badge ${rankClass}">${idx + 1}</div></td>
+      <td class="topic-cell">${_e(topic)}<div class="q-ref">Q${q.question_number}</div></td>
+      <td><span class="sev-pill sev-${q.severity}">${q.severity}</span></td>
+      <td>
+        <div class="affected-bar-wrap">
+          <div class="affected-bar"><div class="affected-bar-fill" style="width:${barW}%;background:${barCol};"></div></div>
+          <span style="font-weight:700;font-size:13px;color:var(--text-strong);">${affPct}%</span>
+        </div>
+      </td>
+      <td><div class="rec-text">${_e(rec)}</div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Heatmap ──────────────────────────────────────────────────────────────── */
+function buildHeatmap(topics) {
+  const tbody      = document.getElementById('heatmapBody');
+  const bandLabels = ['0–20', '21–40', '41–60', '61–80', '81–100'];
+  tbody.innerHTML  = '';
+  topics.forEach(t => {
+    const tr = document.createElement('tr');
+    const nameTd = document.createElement('td');
+    nameTd.textContent = t.name + (t.qnum ? ' (Q' + t.qnum + ')' : '');
+    tr.appendChild(nameTd);
+    t.bands.forEach((count, i) => {
+      const td = document.createElement('td');
+      td.className = heatClass([10, 30, 50, 70, 90][i]);
+      td.textContent = count;
+      td.setAttribute('data-tip', `${count} student${count !== 1 ? 's' : ''} scored ${bandLabels[i]}%`);
+      tr.appendChild(td);
+    });
+    const avgTd = document.createElement('td');
+    avgTd.className   = heatClass(t.avg);
+    avgTd.textContent = t.avg + '%';
+    avgTd.setAttribute('data-tip', `Topic average: ${t.avg}%`);
+    tr.appendChild(avgTd);
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Weakness chart ───────────────────────────────────────────────────────── */
+function renderChart(topics) {
+  const sorted = [...topics].sort((a, b) => a.avg - b.avg);
+  const labels = sorted.map(t => t.name);
+  const values = sorted.map(t => t.avg);
+  const colors = sorted.map(t => barColor(t.avg));
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const ctx = document.getElementById('weaknessChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Average Score (%)',
+        data:  values,
+        backgroundColor: colors.map(c => c.bg),
+        borderColor:     colors.map(c => c.border),
+        borderWidth: 2, borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(10,28,52,0.88)',
+          titleColor: 'rgba(255,255,255,0.92)',
+          bodyColor:  'rgba(255,255,255,0.72)',
+          borderColor: 'rgba(152,185,212,0.35)',
+          borderWidth: 1, padding: 10, cornerRadius: 10,
+          callbacks: { label: ctx => ` Average: ${ctx.parsed.x}%` }
+        }
+      },
+      scales: {
+        x: {
+          min: 0, max: 100,
+          grid:   { color: 'rgba(208,223,235,0.45)' },
+          border: { display: false, dash: [4,4] },
+          ticks:  { color: 'rgba(40,64,91,0.55)', font: { size:11 }, callback: v => v + '%' }
+        },
+        y: {
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: 'rgba(40,64,91,0.72)', font: { size:12, weight:'600' } }
+        }
+      },
+      animation: { duration: 600, easing: 'easeOutQuart' }
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>

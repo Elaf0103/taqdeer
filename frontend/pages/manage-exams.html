@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Manage Exams</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js?v=2"></script>
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid !important; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 14px 20px; margin-bottom: 24px;
+      border-radius: var(--radius-lg);
+    }
+    .topbar-left h2 { margin: 0; font-size: 20px; }
+    .topbar-left .bc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .sidebar-toggle {
+      display: none; width: 36px; height: 36px; border-radius: 10px;
+      border: 1px solid var(--glass-border); background: rgba(255,255,255,0.22);
+      place-items: center; cursor: pointer;
+    }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 14px 5px 5px; border-radius: 999px;
+      background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border);
+      font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer;
+      transition: background var(--t); text-decoration: none;
+    }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800;
+    }
+
+    /* ── Workflow Progress Indicator ─────────────────────────────────────────── */
+    .workflow-progress-wrap {
+      margin-bottom: 24px; padding: 24px 28px 20px;
+      border-radius: var(--radius-lg);
+      display: flex; flex-direction: row; align-items: center; gap: 16px;
+    }
+
+    /* Stepper grows to fill space between the nav buttons */
+    .wp-steps-outer {
+      flex: 1; order: 2; position: relative; min-width: 0;
+    }
+
+    /* ── Single continuous grey track behind all circles ── */
+    /* left/right = half of one step's 1/5 width = 1/10 of container */
+    .wp-steps-outer::before {
+      content: '';
+      position: absolute;
+      top: 26px;                    /* = half of 52px bubble */
+      left: calc(100% / 10);
+      right: calc(100% / 10);
+      height: 2px;
+      background: rgba(208,223,235,.5);
+      border-radius: 2px;
+      z-index: 0;
+    }
+
+    /* Blue progress fill — width driven by JS */
+    .wp-fill {
+      position: absolute;
+      top: 26px;
+      left: calc(100% / 10);
+      height: 2px;
+      width: 0;
+      background: linear-gradient(90deg, var(--c-ice), var(--c-arctic));
+      border-radius: 2px;
+      z-index: 1;
+      max-width: calc(100% - 2 * (100% / 10));
+      transition: width .55s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Steps row sits above both track lines */
+    .wp-steps-row {
+      display: flex;
+      position: relative;
+      z-index: 2;
+    }
+
+    .wp-step {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      position: relative;
+    }
+    .wp-step.upcoming { opacity: .38; cursor: not-allowed; }
+    .wp-step.completed { cursor: pointer; }
+    .wp-step.completed:hover .wp-bubble { transform: scale(1.1); }
+    .wp-step.active { cursor: default; }
+
+    /* ── The circle ── */
+    .wp-bubble {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 17px; font-weight: 800;
+      border: 2.5px solid;
+      transition: all .32s cubic-bezier(.34,1.56,.64,1);
+      position: relative; z-index: 3;
+    }
+    .wp-step.completed .wp-bubble {
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      border-color: var(--c-arctic); color: #fff;
+    }
+    .wp-step.active .wp-bubble {
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      border-color: var(--c-midnight); color: #fff;
+      box-shadow: 0 0 0 7px rgba(68,107,149,.15), 0 8px 24px rgba(40,64,91,.32);
+    }
+    .wp-step.upcoming .wp-bubble {
+      background: #fff;
+      border-color: rgba(208,223,235,.95);
+      color: var(--text-muted);
+    }
+    .wp-bubble svg {
+      width: 18px; height: 18px; stroke: #fff; fill: none;
+      stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ── Step label ── */
+    .wp-lbl {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; white-space: nowrap; text-align: center;
+      line-height: 1.2;
+    }
+    .wp-step.completed .wp-lbl { color: var(--c-arctic); }
+    .wp-step.active    .wp-lbl { color: var(--c-midnight); font-weight: 800; letter-spacing: .06em; }
+    .wp-step.upcoming  .wp-lbl { color: var(--text-muted); }
+
+    /* Nav row becomes layout-transparent; children become flex items of wrapper */
+    .wp-nav-row { display: contents; }
+
+    /* Next button wrapper: ordered after the stepper */
+    .wp-next-wrap { order: 3; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+
+    /* Next button */
+    .wp-next-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 20px; border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .1s; white-space: nowrap; flex-shrink: 0;
+      box-shadow: 0 4px 18px rgba(68,107,149,.35); align-self: center;
+    }
+    .wp-next-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .wp-next-btn:active:not(:disabled) { transform: translateY(0); }
+    .wp-next-btn:disabled {
+      background: rgba(208,223,235,.52); color: var(--text-muted);
+      cursor: not-allowed; box-shadow: none;
+    }
+    .wp-next-btn svg {
+      width: 14px; height: 14px; stroke: currentColor; fill: none;
+      stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+    /* ── Responsive ── */
+    @media (max-width: 980px) {
+      .wp-bubble { width: 44px; height: 44px; font-size: 15px; }
+      .wp-steps-outer::before { top: 22px; }
+      .wp-fill { top: 22px; }
+      .wp-lbl { font-size: 10px; }
+    }
+    @media (max-width: 760px) {
+      .wp-lbl { display: none; }
+      .wp-bubble { width: 36px; height: 36px; font-size: 13px; }
+      .wp-bubble svg { width: 14px; height: 14px; }
+      .wp-steps-outer::before { top: 18px; }
+      .wp-fill { top: 18px; }
+      .wp-btn-label { display: none; }
+      .workflow-progress-wrap { padding: 18px 16px; }
+    }
+    @media (max-width: 500px) {
+      .wp-sep { margin: 0 10px; }
+      .wp-next-btn { padding: 10px 12px; }
+    }
+
+    /* ── Toolbar ────────────────────────────────────────────────────────────── */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 14px 16px; border-radius: var(--radius-lg); margin-bottom: 18px;
+    }
+    .search-box {
+      flex: 1; min-width: 200px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 14px; border-radius: 11px;
+      background: rgba(255,255,255,0.35); border: 1.5px solid rgba(208,223,235,0.7);
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .search-box:focus-within { border-color: var(--c-ice); box-shadow: 0 0 0 3px rgba(104,149,188,.12); }
+    .search-box svg { width: 15px; height: 15px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .search-box input { border: none; background: transparent; outline: none; font-size: 13px; color: var(--text-strong); width: 100%; }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    .chip-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip-filter {
+      padding: 7px 13px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1.5px solid rgba(208,223,235,0.7); background: rgba(255,255,255,0.3);
+      color: var(--text-muted); cursor: pointer; transition: all .18s; user-select: none;
+    }
+    .chip-filter:hover { background: rgba(255,255,255,.55); color: var(--text-strong); }
+    .chip-filter.active { background: var(--c-midnight); border-color: var(--c-midnight); color: #fff; }
+
+    .btn-add {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .1s; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(68,107,149,.3);
+    }
+    .btn-add:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-add:active { transform: translateY(0); }
+    .btn-add svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Cards grid ─────────────────────────────────────────────────────────── */
+    .cards-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .cards-header .count { font-size: 13px; color: var(--text-muted); }
+    .sort-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+    .sort-bar select {
+      padding: 5px 10px; border-radius: 8px; border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.3); color: var(--text); font-size: 12px; outline: none; cursor: pointer;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1100px) { .cards-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 640px)  { .cards-grid { grid-template-columns: 1fr; } }
+
+    .exam-card {
+      border-radius: var(--radius-lg);
+      padding: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      transition: transform .2s, box-shadow .2s, border-color .18s;
+      cursor: pointer;
+      animation: fadeUp .35s ease both;
+      position: relative;
+    }
+    .exam-card:hover { transform: translateY(-3px); box-shadow: 0 18px 48px rgba(40,64,91,.18); }
+    .exam-card.selected { border: 2px solid var(--c-arctic) !important; box-shadow: 0 0 0 4px rgba(68,107,149,.16), 0 12px 36px rgba(40,64,91,.18); }
+    .card-sel-badge {
+      display: none; position: absolute; top: 10px; right: 10px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      align-items: center; justify-content: center; z-index: 4;
+      border: 2px solid #fff;
+    }
+    .exam-card.selected .card-sel-badge { display: flex; }
+    .card-sel-badge svg { width: 10px; height: 10px; stroke: #fff; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+    .card-top {
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid rgba(208,223,235,0.35);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    }
+    .card-name {
+      font-size: 14px; font-weight: 700; color: var(--text-strong);
+      line-height: 1.35;
+    }
+    .card-type-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .card-type-badge.midterm  { background: rgba(68,107,149,.14); color: #1e3a5f; }
+    .card-type-badge.final    { background: rgba(124,58,237,.12); color: #4c1d95; }
+    .card-type-badge.quiz     { background: rgba(16,185,129,.12);  color: #065f46; }
+
+    .card-body { padding: 14px 18px; flex: 1; }
+    .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .meta-item { display: flex; align-items: center; gap: 7px; }
+    .meta-item svg { width: 13px; height: 13px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .meta-label { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .meta-val   { font-size: 12px; color: var(--text-strong); font-weight: 600; }
+
+    .card-footer {
+      padding: 12px 18px;
+      border-top: 1px solid rgba(208,223,235,0.35);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .status-pill.graded    { background: rgba(16,185,129,.1);  color: #065f46; }  .status-pill.graded::before    { background: #10b981; }
+    .status-pill.reviewing { background: rgba(59,130,246,.1);  color: #1e3a8a; }  .status-pill.reviewing::before { background: #3b82f6; }
+    .status-pill.pending   { background: rgba(245,158,11,.1);  color: #78350f; }  .status-pill.pending::before   { background: #f59e0b; }
+
+    .card-actions { display: flex; gap: 6px; }
+    .act-btn {
+      width: 32px; height: 32px; border-radius: 9px;
+      display: grid; place-items: center; cursor: pointer;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.3);
+      transition: background .15s, border-color .15s;
+    }
+    .act-btn svg { width: 13px; height: 13px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .act-btn.edit svg   { stroke: var(--c-arctic); }
+    .act-btn.edit:hover { background: rgba(68,107,149,.1); border-color: rgba(68,107,149,.3); }
+    .act-btn.del  svg   { stroke: #ef4444; }
+    .act-btn.del:hover  { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); }
+
+    /* ── Empty state ────────────────────────────────────────────────────────── */
+    .empty-wrap {
+      text-align: center; padding: 64px 24px;
+      border-radius: var(--radius-lg);
+    }
+    .empty-ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(208,223,235,0.3);
+      display: grid; place-items: center; margin: 0 auto 18px;
+    }
+    .empty-ring svg { width: 32px; height: 32px; stroke: rgba(40,64,91,.3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .empty-wrap h3 { margin: 0 0 6px; font-size: 16px; color: var(--text-strong); }
+    .empty-wrap p  { margin: 0 0 20px; font-size: 13px; color: var(--text-muted); }
+
+    /* ── Pagination ─────────────────────────────────────────────────────────── */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; flex-wrap: wrap; gap: 10px;
+    }
+    .pagination .info { font-size: 12px; color: var(--text-muted); }
+    .page-btns { display: flex; gap: 5px; }
+    .page-btn {
+      min-width: 32px; height: 32px; padding: 0 10px;
+      border-radius: 8px; border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,.25); font-size: 12px; font-weight: 600;
+      color: var(--text); cursor: pointer; transition: background .15s;
+      display: grid; place-items: center;
+    }
+    .page-btn:hover:not(:disabled) { background: rgba(255,255,255,.55); }
+    .page-btn.active { background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; border-color: transparent; }
+    .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Modal overlay ──────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(10,28,52,.48);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+
+    /* ── Modal card ─────────────────────────────────────────────────────────── */
+    .modal {
+      background: #f7fbff;
+      border: 1px solid var(--glass-border);
+      border-radius: 22px;
+      width: 100%; max-width: 540px;
+      box-shadow: 0 32px 80px rgba(40,64,91,.28);
+      transform: scale(.94) translateY(14px);
+      transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+      max-height: 92vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+    .modal::-webkit-scrollbar { width: 4px; }
+    .modal::-webkit-scrollbar-thumb { background: rgba(40,64,91,.15); border-radius: 2px; }
+
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid rgba(208,223,235,.55);
+      position: sticky; top: 0; background: #f7fbff; z-index: 2;
+    }
+    .modal-head-left { display: flex; align-items: center; gap: 12px; }
+    .modal-icon {
+      width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+    }
+    .modal-icon svg { width: 19px; height: 19px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .modal-head h3 { margin: 0; font-size: 16px; color: var(--text-strong); }
+    .modal-head .modal-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 9px;
+      border: 1px solid rgba(208,223,235,.7); background: rgba(255,255,255,.5);
+      display: grid; place-items: center; cursor: pointer; transition: background .15s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.9); }
+    .modal-close svg { width: 14px; height: 14px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .modal-body { padding: 22px 24px 8px; }
+    .modal-footer {
+      padding: 16px 24px 22px; display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    /* ── Form inside modal ──────────────────────────────────────────────────── */
+    .field-group { margin-bottom: 18px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+    .field-label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 7px;
+    }
+    .req { color: #ef4444; }
+    .field-input {
+      width: 100%; padding: 11px 13px;
+      border-radius: 11px; border: 1.5px solid rgba(208,223,235,.85);
+      background: rgba(255,255,255,.6); color: var(--text-strong);
+      font-size: 13px; outline: none;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .field-input:focus { border-color: var(--c-ice); background: #fff; box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+    .field-input.invalid { border-color: #ef4444; background: #fff5f5; }
+    .field-input.invalid:focus { box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+    .field-err { font-size: 11px; color: #ef4444; margin-top: 5px; display: none; align-items: center; gap: 4px; }
+    .field-err.show { display: flex; }
+    .field-err::before { content: '!'; width: 13px; height: 13px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0; }
+
+    /* Pill selector for type & dept */
+    .pill-group { display: flex; gap: 7px; flex-wrap: wrap; }
+    .pill-opt {
+      padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.5);
+      color: var(--text-muted); cursor: pointer; transition: all .18s; user-select: none;
+    }
+    .pill-opt:hover { border-color: var(--c-powder); color: var(--text-strong); background: rgba(255,255,255,.8); }
+    .pill-opt.selected { background: var(--c-midnight); border-color: var(--c-midnight); color: #fff; }
+    .pill-opt.invalid-group { border-color: #ef4444 !important; }
+
+    /* modal buttons */
+    .btn-cancel {
+      padding: 10px 20px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4);
+      color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-primary {
+      padding: 10px 22px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; transition: opacity .18s;
+      box-shadow: 0 4px 14px rgba(68,107,149,.3);
+    }
+    .btn-primary:hover { opacity: .88; }
+    .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+      border-radius: 50%; animation: spin .65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Delete modal ───────────────────────────────────────────────────────── */
+    .del-modal-inner {
+      max-width: 400px; border-radius: 22px; padding: 32px 28px; text-align: center;
+    }
+    .del-ring {
+      width: 64px; height: 64px; border-radius: 50%; background: rgba(239,68,68,.1);
+      display: grid; place-items: center; margin: 0 auto 18px;
+    }
+    .del-ring svg { width: 28px; height: 28px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .del-modal-inner h3 { margin: 0 0 8px; font-size: 18px; color: var(--text-strong); }
+    .del-modal-inner p  { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+    .del-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-danger { padding: 10px 22px; border-radius: 10px; border: none; background: #ef4444; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; box-shadow: 0 4px 14px rgba(239,68,68,.3); }
+    .btn-danger:hover { opacity: .85; }
+
+    /* ── Logout modal ───────────────────────────────────────────────────────── */
+    .logout-overlay {
+      position: fixed; inset: 0; background: rgba(0,20,40,.55);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .25s; z-index: 300;
+    }
+    .logout-overlay.open { opacity: 1; visibility: visible; }
+    .logout-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 400px; max-width: 92%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s;
+    }
+    .logout-overlay.open .logout-modal { transform: scale(1); }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions  { display: flex; justify-content: center; gap: 12px; }
+
+    /* ── Toast ──────────────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 26px; right: 26px; z-index: 400;
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 20px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; color: #fff;
+      box-shadow: 0 10px 32px rgba(0,0,0,.2);
+      transform: translateY(90px); opacity: 0;
+      transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast.info    { background: linear-gradient(135deg,var(--c-ice),var(--c-arctic)); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Section divider ────────────────────────────────────────────────────── */
+    .section-divider {
+      height: 1px; background: linear-gradient(90deg, transparent, rgba(208,223,235,.6), transparent);
+      margin: 18px 0;
+    }
+  </style>
+</head>
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html" class="active">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════════════════════════ -->
+  <main>
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 style="margin:0;font-size:20px;">Manage Exams</h2>
+          <div class="bc">Dashboard &rsaquo; Manage Exams</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="./profile.html" class="user-chip">
+          <div class="chip-av" id="chipAvatar">?</div>
+          <span id="chipName">Instructor</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Workflow Progress Indicator -->
+    <div class="workflow-progress-wrap glass">
+
+      <div class="wp-steps-outer">
+        <!-- Filled progress track (width set by JS) -->
+        <div class="wp-fill" id="wpFill"></div>
+
+        <!-- Steps row sits above the track lines via z-index -->
+        <div class="wp-steps-row">
+
+          <div class="wp-step" id="wps-1">
+            <div class="wp-bubble">1</div>
+            <div class="wp-lbl">Exam Info</div>
+          </div>
+
+          <div class="wp-step" id="wps-2">
+            <div class="wp-bubble">2</div>
+            <div class="wp-lbl">Rubric &amp; Answer Key</div>
+          </div>
+
+          <div class="wp-step" id="wps-3">
+            <div class="wp-bubble">3</div>
+            <div class="wp-lbl">Upload Answers</div>
+          </div>
+
+          <div class="wp-step" id="wps-4">
+            <div class="wp-bubble">4</div>
+            <div class="wp-lbl">AI Grading</div>
+          </div>
+
+          <div class="wp-step" id="wps-5">
+            <div class="wp-bubble">5</div>
+            <div class="wp-lbl">Review Grades</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="wp-nav-row">
+        <div class="wp-next-wrap" style="display:flex;flex-direction:column;align-items:center;">
+          <button class="wp-next-btn" id="progressNextBtn" disabled title="Select an exam to continue">
+            <span class="wp-btn-label">Next: Rubric &amp; Answer Key</span>
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          <span id="nextHint" style="font-size:11px;color:var(--text-muted);margin-top:5px;text-align:center;">Select an exam to continue</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar glass">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search exams by name, section…" />
+      </div>
+
+      <div class="chip-filters" id="typeFilters">
+        <span class="chip-filter active" data-type="">All</span>
+        <span class="chip-filter" data-type="midterm">Midterm</span>
+        <span class="chip-filter" data-type="final">Final</span>
+        <span class="chip-filter" data-type="quiz">Quiz</span>
+      </div>
+
+      <div class="chip-filters" id="deptFilters">
+        <span class="chip-filter active" data-dept="">All Depts</span>
+        <span class="chip-filter" data-dept="cs">CS</span>
+        <span class="chip-filter" data-dept="is">IS</span>
+        <span class="chip-filter" data-dept="it">IT</span>
+      </div>
+
+      <button class="btn-add" id="btnAdd">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Exam
+      </button>
+    </div>
+
+    <!-- Cards header -->
+    <div class="cards-header">
+      <span class="count" id="resultCount"></span>
+      <div class="sort-bar">
+        Sort by:
+        <select id="sortSelect">
+          <option value="date-desc">Date (Newest)</option>
+          <option value="date-asc">Date (Oldest)</option>
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="name-desc">Name (Z–A)</option>
+          <option value="students-desc">Most Students</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cards grid -->
+    <div id="cardsGrid" class="cards-grid"></div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+
+    <div class="footer-space"></div>
+  </main>
+</div>
+
+<!-- Sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══ ADD / EDIT MODAL ══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="examModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-head-left">
+        <div class="modal-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div>
+          <h3 id="modalTitle" style="margin:0;font-size:16px;">Add New Exam</h3>
+          <div class="modal-sub" id="modalSub">Fill in the details below</div>
+        </div>
+      </div>
+      <button class="modal-close" id="modalClose">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <input type="hidden" id="editId" />
+
+      <!-- Name -->
+      <div class="field-group">
+        <label class="field-label" for="fName">Exam Name <span class="req">*</span></label>
+        <input id="fName" class="field-input" type="text" placeholder="e.g. Midterm — Data Structures" autocomplete="off" />
+        <div class="field-err" id="e-fName">Exam name must be at least 3 characters.</div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Type -->
+      <div class="field-group">
+        <label class="field-label">Exam Type <span class="req">*</span></label>
+        <div class="pill-group" id="typeGroup">
+          <span class="pill-opt" data-val="midterm">Midterm</span>
+          <span class="pill-opt" data-val="final">Final</span>
+          <span class="pill-opt" data-val="quiz">Quiz</span>
+        </div>
+        <input type="hidden" id="fType" />
+        <div class="field-err" id="e-fType">Please select an exam type.</div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Semester -->
+      <div class="field-group">
+        <label class="field-label">Semester <span class="req">*</span></label>
+        <div class="pill-group" id="semesterGroup">
+          <span class="pill-opt" data-val="first">First Semester</span>
+          <span class="pill-opt" data-val="second">Second Semester</span>
+          <span class="pill-opt" data-val="summer">Summer Semester</span>
+        </div>
+        <input type="hidden" id="fSemester" />
+        <div class="field-err" id="e-fSemester">Please select the semester.</div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Date + Section -->
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label" for="fDate">Date <span class="req">*</span></label>
+          <input id="fDate" class="field-input" type="date" />
+          <div class="field-err" id="e-fDate">Date is required.</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fSection">Section <span class="req">*</span></label>
+          <input id="fSection" class="field-input" type="text" placeholder="e.g. CS-301-A" autocomplete="off" />
+          <div class="field-err" id="e-fSection">Section is required.</div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Department -->
+      <div class="field-group">
+        <label class="field-label">Department <span class="req">*</span></label>
+        <div class="pill-group" id="deptGroup">
+          <span class="pill-opt" data-val="cs">Computer Science</span>
+          <span class="pill-opt" data-val="is">Information Systems</span>
+          <span class="pill-opt" data-val="it">Information Technology</span>
+        </div>
+        <input type="hidden" id="fDept" />
+        <div class="field-err" id="e-fDept">Please select a department.</div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Students + Total Marks -->
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label" for="fStudents">Number of Students <span class="req">*</span></label>
+          <input id="fStudents" class="field-input" type="number" min="1" max="999" placeholder="e.g. 35" />
+          <div class="field-err" id="e-fStudents">Enter a valid number (1–999).</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fTotalMarks">Total Marks <span class="req">*</span></label>
+          <input id="fTotalMarks" class="field-input" type="number" min="1" max="1000" placeholder="e.g. 100" />
+          <div class="field-err" id="e-fTotalMarks">Please enter a valid total mark (e.g., 20, 50, 100).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-primary" id="modalSave">
+        <span id="saveText">Add Exam</span>
+        <span class="btn-spinner" id="saveSpinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DELETE MODAL ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal del-modal-inner">
+    <div class="del-ring">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+    <h3>Delete Exam?</h3>
+    <p>You're about to delete <strong id="deleteExamName"></strong>.<br>This action cannot be undone.</p>
+    <div class="del-actions">
+      <button class="btn-cancel" id="delCancelBtn">Cancel</button>
+      <button class="btn-danger" id="delConfirmBtn">Delete Exam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGOUT MODAL ══════════════════════════════════════════════════════════ -->
+<div class="logout-overlay" id="logoutModal">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign out?</h3>
+    <p>You will be redirected to the login page.</p>
+    <div class="logout-actions">
+      <button class="btn-cancel" id="logoutCancelBtn">Cancel</button>
+      <button class="btn-primary" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg id="toastIcon" viewBox="0 0 24 24"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+authGuard();
+(async function () {
+  /* ── Config ───────────────────────────────────────────────────────────────── */
+  const DEPT_LABELS = { cs: 'Computer Science', is: 'Information Systems', it: 'Information Technology' };
+  const PER_PAGE    = 9;
+
+  /* ── State ───────────────────────────────────────────────────────────────── */
+  let exams         = [];
+  let filtered      = [];
+  let currentPage   = 1;
+  let sortCol       = 'date';
+  let sortDir       = 'desc';
+  let activeType    = '';
+  let activeDept    = '';
+  let editingId     = null;
+  let deleteId      = null;
+  let currentExamId = null;
+
+
+  /* ── Data loading ────────────────────────────────────────────────────────── */
+  async function loadExams() {
+    try {
+      exams = await apiFetch('/exams/');
+    } catch (e) {
+      if (e.status !== 401) {
+        // 401 is handled centrally by apiFetch (redirects to login); only surface real failures
+        toast(e.status === 0 ? 'Failed to connect to the server.' : 'Failed to load exams. Please try again.', 'error');
+      }
+      exams = [];
+    }
+    const savedId = parseInt(localStorage.getItem('currentExamId'), 10);
+    if (!isNaN(savedId) && exams.find(e => e.id === savedId)) {
+      currentExamId = savedId;
+    }
+    try {
+      applyFilters();
+      renderProgress();
+    } catch (renderErr) {
+      console.error('[manage-exams] Render error after loadExams:', renderErr);
+    }
+  }
+
+  /* ── Workflow progress ───────────────────────────────────────────────────── */
+  const WORKFLOW_STEPS = [
+    { num:1, href:'./manage-exams.html'    },
+    { num:2, href:'./rubrics.html'         },
+    { num:3, href:'./answer-files.html'    },
+    { num:4, href:'./auto-grading.html'    },
+    { num:5, href:'./results-reviews.html' },
+  ];
+  const THIS_STEP  = 1;
+  const CHECK_SVG  = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  function getWorkflow(examId) {
+    if (!examId) return { maxStep: 1 };
+    const exam = exams.find(e => e.id === examId);
+    if (!exam) return { maxStep: 1 };
+    // Step s shows 'completed' when maxStep > s.
+    // Backend workflowStep=3 means rubric+answers done → frontend step 2 complete.
+    return { maxStep: exam.workflowStep };
+  }
+
+  function renderProgress() {
+    const wf = getWorkflow(currentExamId);
+    let completedCount = 0;
+
+    WORKFLOW_STEPS.forEach(step => {
+      const el = document.getElementById('wps-' + step.num);
+      if (!el) return;
+
+      let state;
+      if (step.num === THIS_STEP) {
+        state = 'active';
+      } else if (currentExamId && wf.maxStep > step.num) {
+        state = 'completed';
+        completedCount++;
+      } else {
+        state = 'upcoming';
+      }
+
+      el.className = 'wp-step ' + state;
+
+      const bubble = el.querySelector('.wp-bubble');
+      bubble.innerHTML = state === 'completed' ? CHECK_SVG : step.num;
+
+      el.onclick = null;
+      if (state === 'completed') {
+        el.onclick = () => {
+          window.location.href = step.href + (currentExamId ? '?examId=' + currentExamId : '');
+        };
+      }
+      el.title = state === 'upcoming' ? 'Complete earlier steps first' : '';
+    });
+
+    const fillEl = document.getElementById('wpFill');
+    if (fillEl) fillEl.style.width = (Math.min(completedCount, WORKFLOW_STEPS.length - 1) / WORKFLOW_STEPS.length * 100) + '%';
+
+    const nextBtn    = document.getElementById('progressNextBtn');
+    const hintEl     = document.getElementById('nextHint');
+    const canProceed = !!currentExamId;
+    nextBtn.disabled = !canProceed;
+    nextBtn.title    = canProceed ? 'Proceed to Rubric & Answer Key' : 'Select an exam to continue';
+    if (hintEl) hintEl.style.display = canProceed ? 'none' : 'block';
+  }
+
+  /* ── Exam selection ──────────────────────────────────────────────────────── */
+  function selectExam(examId) {
+    currentExamId = examId;
+    if (examId) {
+      localStorage.setItem('currentExamId', examId);
+    } else {
+      localStorage.removeItem('currentExamId');
+    }
+    document.querySelectorAll('.exam-card').forEach(card => {
+      const id = parseInt(card.dataset.examid, 10);
+      card.classList.toggle('selected', id === examId);
+    });
+    renderProgress();
+  }
+
+  document.getElementById('progressNextBtn').addEventListener('click', () => {
+    if (!currentExamId) { toast('Select an exam to continue.', 'info'); return; }
+    window.location.href = './rubrics.html?examId=' + currentExamId;
+  });
+
+  /* ── Filter + sort ───────────────────────────────────────────────────────── */
+  function applyFilters() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    filtered = exams.filter(e => {
+      const mq = !q || e.name.toLowerCase().includes(q) || e.section.toLowerCase().includes(q) || (DEPT_LABELS[e.dept]||'').toLowerCase().includes(q);
+      return mq && (!activeType || e.type === activeType) && (!activeDept || e.dept === activeDept);
+    });
+
+    const sv = document.getElementById('sortSelect').value;
+    const [col, dir] = sv.split('-');
+    filtered.sort((a,b) => {
+      let va = a[col], vb = b[col];
+      if (col === 'date')     { va = new Date(va); vb = new Date(vb); }
+      if (col === 'students') { va = +va; vb = +vb; }
+      if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+      if (va < vb) return dir === 'asc' ? -1 :  1;
+      if (va > vb) return dir === 'asc' ?  1 : -1;
+      return 0;
+    });
+
+    currentPage = 1;
+    renderCards();
+    renderPagination();
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────────── */
+  const TYPE_COLORS = { midterm:'#446b95', final:'#7c3aed', quiz:'#059669' };
+
+  function renderCards() {
+    const grid  = document.getElementById('cardsGrid');
+    const start = (currentPage - 1) * PER_PAGE;
+    const page  = filtered.slice(start, start + PER_PAGE);
+
+    document.getElementById('resultCount').textContent =
+      filtered.length ? `${filtered.length} exam${filtered.length !== 1 ? 's' : ''} found` : '';
+
+    if (!page.length) {
+      grid.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'empty-wrap glass';
+      empty.style.gridColumn = '1/-1';
+      empty.innerHTML = `
+        <div class="empty-ring"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <h3>${exams.length ? 'No exams match your filters' : 'No exams yet'}</h3>
+        <p>${exams.length ? 'Try a different search or filter.' : 'Get started by adding your first exam.'}</p>
+        ${!exams.length ? `<button class="btn-add" onclick="document.getElementById('btnAdd').click()" style="margin:0 auto;display:inline-flex;"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Exam</button>` : ''}`;
+      grid.appendChild(empty);
+      return;
+    }
+
+    grid.innerHTML = page.map((e, i) => {
+      const date = new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { day:'numeric', month:'short', year:'numeric' });
+      const typeLbl   = e.type.charAt(0).toUpperCase() + e.type.slice(1);
+      const SEMESTER_LABELS = { first: 'First Semester', second: 'Second Semester', summer: 'Summer Semester' };
+      const semLbl    = e.semester ? SEMESTER_LABELS[e.semester] : '';
+      const statusLbl = (e.status||'pending').charAt(0).toUpperCase() + (e.status||'pending').slice(1);
+      const tc = TYPE_COLORS[e.type] || '#666';
+      const pct = e.answerFiles > 0 ? Math.round(e.graded / e.answerFiles * 100) : 0;
+      const isSelected = currentExamId === e.id;
+
+      return `
+      <div class="exam-card glass${isSelected ? ' selected' : ''}" data-examid="${e.id}" style="animation-delay:${i * 0.05}s;">
+        <div class="card-sel-badge"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="card-top">
+          <div style="flex:1;min-width:0;">
+            <div class="card-name">${esc(e.name)}</div>
+          </div>
+          <span class="card-type-badge ${e.type}">${typeLbl}</span>
+        </div>
+
+        <div class="card-body">
+          <div class="card-meta">
+            <div class="meta-item">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <div><div class="meta-label">Date</div><div class="meta-val">${date}</div></div>
+            </div>
+            <div class="meta-item">
+              <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <div><div class="meta-label">Dept</div><div class="meta-val">${(e.dept||'').toUpperCase()}</div></div>
+            </div>
+            <div class="meta-item">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <div><div class="meta-label">Students</div><div class="meta-val">${e.students}</div></div>
+            </div>
+            <div class="meta-item">
+              <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <div><div class="meta-label">Section</div><div class="meta-val" style="font-family:monospace;">${esc(e.section)}</div></div>
+            </div>
+            ${semLbl ? `<div class="meta-item">
+              <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <div><div class="meta-label">Semester</div><div class="meta-val">${semLbl}</div></div>
+            </div>` : ''}
+          </div>
+
+          ${e.answerFiles > 0 ? `
+          <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:5px;">
+              <span>Grading progress</span>
+              <span style="font-weight:700;color:var(--text-strong);">${pct}%</span>
+            </div>
+            <div style="height:5px;border-radius:3px;background:rgba(208,223,235,.5);overflow:hidden;">
+              <div style="height:100%;width:${pct}%;border-radius:3px;background:${tc};transition:width .8s ease;"></div>
+            </div>
+          </div>` : ''}
+        </div>
+
+        <div class="card-footer">
+          <span class="status-pill ${e.status||'pending'}">${statusLbl}</span>
+          <div class="card-actions">
+            <button class="act-btn edit" title="Edit" onclick="openEdit(${e.id})">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="act-btn del" title="Delete" onclick="openDelete(${e.id})">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  /* ── Pagination ──────────────────────────────────────────────────────────── */
+  function renderPagination() {
+    const total = filtered.length;
+    const pages = Math.ceil(total / PER_PAGE);
+    const el    = document.getElementById('pagination');
+    if (pages <= 1) { el.innerHTML = ''; return; }
+    const s = (currentPage-1)*PER_PAGE+1, en = Math.min(currentPage*PER_PAGE, total);
+    let h = `<span class="info">${s}–${en} of ${total}</span><div class="page-btns">`;
+    h += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+    for (let p=1; p<=pages; p++) {
+      if (pages<=7||p===1||p===pages||Math.abs(p-currentPage)<=1)
+        h += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+      else if (Math.abs(p-currentPage)===2)
+        h += `<span style="padding:0 3px;color:var(--text-muted);">…</span>`;
+    }
+    h += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button></div>`;
+    el.innerHTML = h;
+  }
+  window.goPage = p => {
+    const pages = Math.ceil(filtered.length/PER_PAGE);
+    if (p<1||p>pages) return;
+    currentPage = p; renderCards(); renderPagination();
+  };
+
+  /* ── Card selection (event delegation) ──────────────────────────────────── */
+  document.getElementById('cardsGrid').addEventListener('click', e => {
+    if (e.target.closest('.act-btn')) return;
+    const card = e.target.closest('.exam-card');
+    if (!card) return;
+    const examId = parseInt(card.dataset.examid, 10);
+    if (isNaN(examId)) return;
+    // Toggle: clicking the already-selected exam deselects it
+    selectExam(examId === currentExamId ? null : examId);
+  });
+
+  /* ── Chip filters ────────────────────────────────────────────────────────── */
+  document.getElementById('typeFilters').addEventListener('click', e => {
+    const chip = e.target.closest('.chip-filter'); if (!chip) return;
+    document.querySelectorAll('#typeFilters .chip-filter').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activeType = chip.dataset.type;
+    applyFilters();
+  });
+  document.getElementById('deptFilters').addEventListener('click', e => {
+    const chip = e.target.closest('.chip-filter'); if (!chip) return;
+    document.querySelectorAll('#deptFilters .chip-filter').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activeDept = chip.dataset.dept;
+    applyFilters();
+  });
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+  document.getElementById('sortSelect').addEventListener('change', applyFilters);
+
+  /* ── Pill selectors in modal ─────────────────────────────────────────────── */
+  function wirePillGroup(groupId, hiddenId, errId) {
+    document.getElementById(groupId).addEventListener('click', e => {
+      const p = e.target.closest('.pill-opt'); if (!p) return;
+      document.querySelectorAll(`#${groupId} .pill-opt`).forEach(x => x.classList.remove('selected'));
+      p.classList.add('selected');
+      document.getElementById(hiddenId).value = p.dataset.val;
+      document.getElementById(errId).classList.remove('show');
+      document.querySelectorAll(`#${groupId} .pill-opt`).forEach(x => x.classList.remove('invalid-group'));
+    });
+  }
+  wirePillGroup('typeGroup',     'fType',     'e-fType');
+  wirePillGroup('semesterGroup', 'fSemester', 'e-fSemester');
+  wirePillGroup('deptGroup',     'fDept',     'e-fDept');
+
+  /* ── Modal open/close ────────────────────────────────────────────────────── */
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  document.getElementById('examModal').addEventListener('click',   e => { if (e.target===e.currentTarget) closeExamModal(); });
+  document.getElementById('deleteModal').addEventListener('click', e => { if (e.target===e.currentTarget) closeModal('deleteModal'); });
+
+  /* ── Clear form ──────────────────────────────────────────────────────────── */
+  const TEXT_FIELDS = ['fName','fDate','fSection','fStudents','fTotalMarks'];
+  function clearForm() {
+    TEXT_FIELDS.forEach(id => {
+      document.getElementById(id).value = '';
+      document.getElementById(id).classList.remove('invalid');
+    });
+    ['fType','fSemester','fDept'].forEach(id => document.getElementById(id).value = '');
+    ['e-fName','e-fType','e-fSemester','e-fDate','e-fSection','e-fDept','e-fStudents','e-fTotalMarks'].forEach(id => document.getElementById(id).classList.remove('show'));
+    document.querySelectorAll('.pill-opt').forEach(p => p.classList.remove('selected','invalid-group'));
+    document.getElementById('saveSpinner').style.display = 'none';
+    document.getElementById('modalSave').disabled = false;
+  }
+
+  /* ── Validation ──────────────────────────────────────────────────────────── */
+  function validate() {
+    let ok = true;
+    const checks = [
+      ['fName',     v => v.trim().length>=3,       'Exam name must be at least 3 characters.'],
+      ['fType',     v => !!v,                       'Please select an exam type.'],
+      ['fSemester', v => !!v,                       'Please select the semester.'],
+      ['fDate',     v => !!v,                       'Date is required.'],
+      ['fSection',  v => v.trim().length>=2,        'Section is required (e.g. CS-301-A).'],
+      ['fDept',     v => !!v,                       'Please select a department.'],
+      ['fStudents',   v => +v>=1 && +v<=999,          'Enter a valid number (1–999).'],
+      ['fTotalMarks', v => +v>=1 && +v<=1000,        'Please enter a valid total mark (e.g., 20, 50, 100).'],
+    ];
+    checks.forEach(([id, fn, msg]) => {
+      const val = document.getElementById(id).value;
+      const errEl = document.getElementById('e-'+id);
+      if (!fn(val)) {
+        errEl.textContent = msg; errEl.classList.add('show');
+        // highlight pill group if applicable
+        if (id==='fType')     document.querySelectorAll('#typeGroup .pill-opt').forEach(p=>p.classList.add('invalid-group'));
+        if (id==='fSemester') document.querySelectorAll('#semesterGroup .pill-opt').forEach(p=>p.classList.add('invalid-group'));
+        if (id==='fDept')     document.querySelectorAll('#deptGroup .pill-opt').forEach(p=>p.classList.add('invalid-group'));
+        const inp = document.getElementById(id);
+        if (inp.tagName==='INPUT') inp.classList.add('invalid');
+        ok = false;
+      } else {
+        errEl.classList.remove('show');
+        const inp = document.getElementById(id);
+        if (inp.tagName==='INPUT') inp.classList.remove('invalid');
+      }
+    });
+    return ok;
+  }
+
+  // Real-time clear
+  TEXT_FIELDS.forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      document.getElementById(id).classList.remove('invalid');
+      document.getElementById('e-'+id).classList.remove('show');
+    });
+  });
+
+  /* ── Add button ──────────────────────────────────────────────────────────── */
+  document.getElementById('btnAdd').addEventListener('click', () => {
+    clearForm(); editingId = null;
+    document.getElementById('modalTitle').textContent = 'Add New Exam';
+    document.getElementById('modalSub').textContent   = 'Fill in the details below';
+    document.getElementById('saveText').textContent   = 'Add Exam';
+    document.getElementById('fDate').value       = new Date().toISOString().slice(0,10);
+    document.getElementById('fTotalMarks').value = 100;
+    openModal('examModal');
+    setTimeout(()=>document.getElementById('fName').focus(),80);
+  });
+  document.getElementById('modalClose').addEventListener('click',  () => closeExamModal());
+  document.getElementById('modalCancel').addEventListener('click', () => closeExamModal());
+  function closeExamModal() { closeModal('examModal'); clearForm(); editingId = null; }
+
+  /* ── Edit ────────────────────────────────────────────────────────────────── */
+  window.openEdit = function(id) {
+    const exam = exams.find(e=>e.id===id); if (!exam) return;
+    clearForm(); editingId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Exam';
+    document.getElementById('modalSub').textContent   = 'Update the exam details';
+    document.getElementById('saveText').textContent   = 'Save Changes';
+    document.getElementById('fName').value     = exam.name;
+    document.getElementById('fDate').value     = exam.date;
+    document.getElementById('fSection').value  = exam.section;
+    document.getElementById('fStudents').value   = exam.students;
+    document.getElementById('fTotalMarks').value = exam.totalMarks || 100;
+    // select type pill
+    document.getElementById('fType').value = exam.type;
+    document.querySelector(`#typeGroup .pill-opt[data-val="${exam.type}"]`)?.classList.add('selected');
+    // select semester pill
+    if (exam.semester) {
+      document.getElementById('fSemester').value = exam.semester;
+      document.querySelector(`#semesterGroup .pill-opt[data-val="${exam.semester}"]`)?.classList.add('selected');
+    }
+    // select dept pill
+    document.getElementById('fDept').value = exam.dept;
+    document.querySelector(`#deptGroup .pill-opt[data-val="${exam.dept}"]`)?.classList.add('selected');
+    openModal('examModal');
+    setTimeout(()=>document.getElementById('fName').focus(),80);
+  };
+
+  /* ── Save ────────────────────────────────────────────────────────────────── */
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    if (!validate()) return;
+
+    const payload = {
+      name:       document.getElementById('fName').value.trim(),
+      type:       document.getElementById('fType').value,
+      semester:   document.getElementById('fSemester').value,
+      date:       document.getElementById('fDate').value,
+      section:    document.getElementById('fSection').value.trim(),
+      dept:       document.getElementById('fDept').value,
+      students:   +document.getElementById('fStudents').value,
+      totalMarks: +document.getElementById('fTotalMarks').value,
+    };
+
+    const wasEditing = editingId !== null;
+
+    // Detect no-change in edit mode before touching button state or calling the API
+    if (wasEditing) {
+      const orig = exams.find(e => e.id === editingId);
+      if (orig &&
+          payload.name       === orig.name        &&
+          payload.type       === orig.type        &&
+          payload.semester   === orig.semester    &&
+          payload.date       === orig.date        &&
+          payload.section    === orig.section     &&
+          payload.dept       === orig.dept        &&
+          payload.students   === orig.students    &&
+          payload.totalMarks === orig.totalMarks
+      ) {
+        closeExamModal();
+        toast('No changes to save.', 'info');
+        return;
+      }
+    }
+
+    const btn     = document.getElementById('modalSave');
+    const spinner = document.getElementById('saveSpinner');
+    btn.disabled          = true;
+    spinner.style.display = 'inline-block';
+
+    try {
+      if (wasEditing) {
+        await apiFetch(`/exams/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        const created = await apiFetch('/exams/', { method: 'POST', body: JSON.stringify(payload) });
+        // Auto-select the new exam so the user can proceed to the next step
+        currentExamId = created.id;
+        localStorage.setItem('currentExamId', created.id);
+      }
+      await loadExams();
+      closeExamModal();
+      toast(wasEditing ? 'Exam updated successfully.' : 'Exam added successfully.', 'success');
+    } catch (err) {
+      console.error('[manage-exams] Save error:', err);
+      toast(getErrorMessage(err) || 'Save failed. Please try again.', 'error');
+    } finally {
+      btn.disabled          = false;
+      spinner.style.display = 'none';
+    }
+  });
+
+  /* ── Delete ──────────────────────────────────────────────────────────────── */
+  window.openDelete = function(id) {
+    const exam = exams.find(e=>e.id===id); if (!exam) return;
+    deleteId = id;
+    document.getElementById('deleteExamName').textContent = exam.name;
+    openModal('deleteModal');
+  };
+  document.getElementById('delCancelBtn').addEventListener('click', () => closeModal('deleteModal'));
+  document.getElementById('delConfirmBtn').addEventListener('click', async () => {
+    if (deleteId === null) return;
+    const btn  = document.getElementById('delConfirmBtn');
+    const name = exams.find(e => e.id === deleteId)?.name || 'Exam';
+    btn.disabled = true;
+    try {
+      await apiFetch(`/exams/${deleteId}`, { method: 'DELETE' });
+      if (deleteId === currentExamId) {
+        currentExamId = null;
+        localStorage.removeItem('currentExamId');
+      }
+      deleteId = null;
+      closeModal('deleteModal');
+      await loadExams();
+      toast(`"${name}" deleted.`, 'info');
+    } catch (err) {
+      toast(getErrorMessage(err) || 'Delete failed. Please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ── Error message extractor ─────────────────────────────────────────────── */
+  function getErrorMessage(err) {
+    if (!err) return 'Something went wrong.';
+    if (typeof err === 'string') return err;
+    // Pydantic v2 validation error list: [{msg, loc, type, ...}]
+    if (err.detail) {
+      if (Array.isArray(err.detail)) {
+        return err.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+      }
+      return String(err.detail);
+    }
+    // Standard Error object
+    if (err.message) return String(err.message);
+    // Fallback: JSON-stringify whatever came in
+    try { return JSON.stringify(err); } catch { return 'Something went wrong.'; }
+  }
+
+  /* ── Toast ───────────────────────────────────────────────────────────────── */
+  let toastTmr;
+  const T_ICONS = {
+    success:'<polyline points="20 6 9 17 4 12"/>',
+    error:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+    info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12.01" y2="16"/><line x1="12" y1="8" x2="12" y2="12"/>',
+  };
+  function toast(msg, type='success') {
+    const el = document.getElementById('toast');
+    // Defensive: never render a raw object — always coerce to string
+    document.getElementById('toastMsg').textContent = (typeof msg === 'string') ? msg : getErrorMessage(msg);
+    document.getElementById('toastIcon').innerHTML  = T_ICONS[type]||T_ICONS.info;
+    el.className = `toast ${type} show`;
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(()=>el.classList.remove('show'), 3400);
+  }
+
+  /* ── Sidebar mobile ──────────────────────────────────────────────────────── */
+  const sb  = document.getElementById('sidebar');
+  const sbo = document.getElementById('sidebarOverlay');
+  document.getElementById('sidebarToggle').addEventListener('click', ()=>{ sb.classList.toggle('mobile-open'); sbo.classList.toggle('open'); });
+  sbo.addEventListener('click', ()=>{ sb.classList.remove('mobile-open'); sbo.classList.remove('open'); });
+
+  /* ── Logout ──────────────────────────────────────────────────────────────── */
+  document.getElementById('logoutTrigger').addEventListener('click', e=>{ e.preventDefault(); openModal('logoutModal'); });
+  document.getElementById('logoutCancelBtn').addEventListener('click', ()=>closeModal('logoutModal'));
+  document.getElementById('logoutModal').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal('logoutModal'); });
+
+  /* ── Escape key ──────────────────────────────────────────────────────────── */
+  document.addEventListener('keydown', e=>{
+    if (e.key!=='Escape') return;
+    ['examModal','deleteModal','logoutModal'].forEach(id=>{
+      if (document.getElementById(id).classList.contains('open')) {
+        if (id==='examModal') closeExamModal(); else closeModal(id);
+      }
+    });
+  });
+
+  /* ── Init ────────────────────────────────────────────────────────────────── */
+  await loadExams();
+})();
+
+/* ── Load profile name ───────────────────────────────────────────────────── */
+(function() {
+  const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+  if (!p) return;
+  const _name  = getDisplayName(p) || p.email || 'User';
+  const _inits = _name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
+  const _avUrl = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+  const av = document.getElementById('chipAvatar');
+  const nm = document.getElementById('chipName');
+  if (nm) nm.textContent = _name;
+  if (av) {
+    if (_avUrl) {
+      av.innerHTML = `<img src="${_avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+      av.textContent = _inits;
+    }
+  }
+})();
+</script>
+</body>
+</html>

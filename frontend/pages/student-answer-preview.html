@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Student Answer Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js"></script>
+  <style>
+    /* ── Standalone page layout (no sidebar) ───────────────────────────────── */
+    body { overflow-x: hidden; }
+    .preview-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    /* ── Top bar ────────────────────────────────────────────────────────────── */
+    .pv-topbar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 26px;
+    }
+    .pv-back-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 18px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8);
+      background: rgba(255,255,255,.45); color: var(--text-strong);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background .15s; text-decoration: none;
+    }
+    .pv-back-btn:hover { background: rgba(255,255,255,.85); }
+    .pv-back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .pv-page-title { font-size: 18px; font-weight: 800; color: var(--text-strong); }
+
+    /* ── Glass card base ────────────────────────────────────────────────────── */
+    .pv-card { border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; }
+    .pv-card-body { padding: 24px 26px; }
+    .pv-card-head {
+      padding: 18px 26px 16px;
+      border-bottom: 1px solid rgba(208,223,235,.45);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .pv-card-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center;
+    }
+    .pv-card-icon svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .pv-card-title { font-size: 15px; font-weight: 700; color: var(--text-strong); }
+
+    /* ── Student + Exam header card ─────────────────────────────────────────── */
+    .pvh-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 620px) { .pvh-grid { grid-template-columns: 1fr; } }
+    .pvh-student { display: flex; align-items: flex-start; gap: 16px; }
+    .pvh-avatar {
+      width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center;
+      font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -.5px;
+    }
+    .pvh-name { font-size: 17px; font-weight: 800; color: var(--text-strong); margin-bottom: 4px; line-height: 1.2; }
+    .pvh-uid-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+    .pvh-uid-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px;
+      background: rgba(68,107,149,.1); color: var(--c-midnight);
+      font-size: 11px; font-weight: 700; font-family: ui-monospace, monospace;
+    }
+    .pvh-section-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px;
+      background: rgba(104,149,188,.1); color: var(--c-arctic);
+      font-size: 11px; font-weight: 700;
+    }
+    .pvh-unknown { color: var(--text-muted); font-style: italic; font-size: 13px; }
+    .pvh-divider { display: none; }
+    @media (max-width: 620px) { .pvh-divider { display: block; height: 1px; background: rgba(208,223,235,.5); } }
+    .pvh-exam { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+    .pvh-exam-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .pvh-exam-name { font-size: 15px; font-weight: 800; color: var(--text-strong); line-height: 1.3; }
+    .pvh-exam-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 4px; }
+    .pvh-meta-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .pvh-meta-chip svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .pvh-marks-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 999px;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      color: #fff; font-size: 12px; font-weight: 800;
+    }
+
+    /* ── Loading / error states ─────────────────────────────────────────────── */
+    .pv-status { text-align: center; padding: 60px 20px; font-size: 14px; color: var(--text-muted); }
+    .pv-status-spinner {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 3px solid rgba(68,107,149,.15); border-top-color: var(--c-arctic);
+      animation: pv-spin .85s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes pv-spin { to { transform: rotate(360deg); } }
+    .pv-error-ring { width: 52px; height: 52px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 16px; }
+    .pv-error-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; }
+    .pv-error-msg { font-size: 14px; color: #b91c1c; font-weight: 600; }
+
+    /* ── Answer cards ────────────────────────────────────────────────────────── */
+    .sa-cards { display: flex; flex-direction: column; gap: 14px; }
+    .sa-card {
+      border-radius: 14px; border: 1.5px solid rgba(208,223,235,.75);
+      background: rgba(255,255,255,.42); padding: 16px 18px;
+      transition: border-color .2s;
+    }
+    .sa-card.sa-block--modified { border-color: rgba(217,119,6,.4); }
+    .sa-q-label { font-size: 12px; font-weight: 800; color: var(--c-arctic); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .sa-q-text { font-size: 13px; color: var(--text-strong); margin-bottom: 12px; line-height: 1.55; }
+    .sa-answer-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+    .sa-answer-text { font-size: 13px; color: var(--text-strong); white-space: pre-wrap; line-height: 1.6; background: rgba(255,255,255,.6); border-radius: 8px; padding: 10px 12px; border: 1px solid rgba(208,223,235,.7); min-height: 36px; }
+    .sa-answer-text.sa-blank { color: var(--text-muted); font-style: italic; }
+    .sa-sub-block { border-top: 1px solid rgba(208,223,235,.6); padding-top: 12px; margin-top: 12px; transition: border-color .2s; }
+    .sa-sub-block.sa-block--modified { border-top-color: rgba(217,119,6,.35); }
+    .sa-sub-label { font-size: 12px; font-weight: 800; color: var(--c-ice); letter-spacing: .04em; margin-bottom: 4px; }
+    .sa-sub-q-text { font-size: 12px; color: var(--text-strong); margin-bottom: 8px; line-height: 1.5; }
+    .sa-mcq-opts { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+    .sa-mcq-opt { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; border: 1.5px solid rgba(208,223,235,.5); background: rgba(255,255,255,.5); }
+    .sa-mcq-opt.sa-selected { border-color: rgba(68,107,149,.45); background: rgba(68,107,149,.08); font-weight: 700; }
+    .sa-mcq-opt.sa-crossed  { opacity: .5; text-decoration: line-through; }
+    .sa-mcq-opt.sa-correct-key { border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.07); }
+    .sa-mcq-mark { font-size: 11px; font-weight: 800; width: 14px; text-align: center; color: var(--text-muted); }
+    .sa-mcq-opt.sa-selected .sa-mcq-mark { color: var(--c-arctic); }
+    .sa-drawing-note { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,.4); border-radius: 8px; border: 1px solid rgba(208,223,235,.6); line-height: 1.5; }
+    .sa-drawing-note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; stroke: var(--text-muted); fill: none; stroke-width: 2; }
+    .sa-drawing-img-wrap { margin-top: 10px; }
+    .sa-drawing-img { display: block; max-width: 100%; border-radius: 8px; border: 1px solid rgba(208,223,235,.8); box-shadow: 0 2px 10px rgba(40,64,91,.1); }
+    .sa-drawing-caption { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+    .sa-no-answers { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px; }
+
+    /* ── Block top row ────────────────────────────────────────────────────────── */
+    .sa-block-top-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .sa-block-top-row .sa-q-label,
+    .sa-block-top-row .sa-sub-label { margin-bottom: 0; }
+    .sa-modified-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      background: rgba(217,119,6,.12); color: #92400e;
+      font-size: 10px; font-weight: 700; letter-spacing: .04em;
+    }
+    .sa-block-controls { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────────── */
+    .sa-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 7px;
+      font-size: 11.5px; font-weight: 700; cursor: pointer;
+      border: 1.5px solid transparent; transition: background .15s, border-color .15s;
+      line-height: 1;
+    }
+    .sa-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .sa-btn-edit   { background: rgba(68,107,149,.08); border-color: rgba(68,107,149,.3); color: var(--c-arctic); }
+    .sa-btn-edit:hover { background: rgba(68,107,149,.16); }
+    .sa-btn-delete { background: rgba(239,68,68,.07); border-color: rgba(239,68,68,.25); color: #b91c1c; }
+    .sa-btn-delete:hover { background: rgba(239,68,68,.14); }
+    .sa-btn-save   { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.35); color: #065f46; }
+    .sa-btn-save:hover { background: rgba(16,185,129,.2); }
+    .sa-btn-save:disabled { opacity: .55; cursor: not-allowed; }
+    .sa-btn-cancel { background: rgba(100,116,139,.07); border-color: rgba(100,116,139,.25); color: var(--text-muted); }
+    .sa-btn-cancel:hover { background: rgba(100,116,139,.14); }
+
+    /* ── Edit form (open-ended) ───────────────────────────────────────────────── */
+    .sa-edit-form { display: none; margin-top: 8px; }
+    .sa-edit-form.sa-edit-open { display: block; }
+    .sa-edit-textarea {
+      width: 100%; box-sizing: border-box;
+      min-height: 90px; padding: 10px 12px;
+      font-size: 13px; line-height: 1.6; font-family: inherit;
+      color: var(--text-strong);
+      border: 1.5px solid rgba(68,107,149,.4); border-radius: 8px;
+      background: rgba(255,255,255,.8); resize: vertical; outline: none;
+      transition: border-color .15s;
+    }
+    .sa-edit-textarea:focus { border-color: var(--c-arctic); }
+    .sa-edit-actions { display: flex; gap: 7px; margin-top: 8px; align-items: center; }
+    .sa-edit-saving-indicator { font-size: 11px; color: var(--text-muted); display: none; }
+    .sa-edit-error { font-size: 11px; color: #b91c1c; display: none; margin-left: 4px; }
+
+    /* ── MCQ edit form ────────────────────────────────────────────────────────── */
+    .sa-mcq-edit-wrap {
+      display: flex; flex-direction: column; gap: 6px;
+      margin-bottom: 2px;
+    }
+    .sa-mcq-edit-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 8px;
+      border: 1.5px solid rgba(208,223,235,.6);
+      background: rgba(255,255,255,.55);
+      transition: border-color .15s, background .15s;
+    }
+    .sa-mcq-edit-row:has(.sa-mcq-edit-radio:checked) {
+      border-color: rgba(68,107,149,.5);
+      background: rgba(68,107,149,.07);
+    }
+    .sa-mcq-edit-radio {
+      accent-color: var(--c-arctic);
+      width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
+    }
+    .sa-mcq-edit-letter {
+      font-size: 12px; font-weight: 800; color: var(--c-arctic);
+      min-width: 20px; flex-shrink: 0;
+    }
+    .sa-mcq-edit-text-input {
+      flex: 1; min-width: 0;
+      padding: 4px 8px; border-radius: 6px;
+      font-size: 12.5px; font-family: inherit; color: var(--text-strong);
+      border: 1px solid rgba(208,223,235,.7);
+      background: rgba(255,255,255,.7); outline: none;
+      transition: border-color .15s;
+    }
+    .sa-mcq-edit-text-input:focus { border-color: var(--c-arctic); }
+    .sa-mcq-edit-hint {
+      font-size: 11px; color: var(--text-muted);
+      margin-bottom: 6px; line-height: 1.5;
+    }
+
+    /* ── Student export dropdown (mirrors Answer Key export style) ─────────── */
+    .pv-export-wrap { position: relative; display: inline-flex; margin-left: auto; }
+    .pv-export-trigger {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 14px; border-radius: 10px;
+      border: 1.5px solid rgba(68,107,149,.35); background: rgba(68,107,149,.08);
+      color: var(--c-arctic); font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .15s, border-color .15s; white-space: nowrap;
+    }
+    .pv-export-trigger:hover { background: rgba(68,107,149,.14); border-color: rgba(68,107,149,.55); }
+    .pv-export-trigger svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .pv-exp-chevron { transition: transform .2s; margin-left: 2px; }
+    .pv-export-wrap.open .pv-exp-chevron { transform: rotate(180deg); }
+    .pv-export-dropdown {
+      display: none; position: absolute; top: calc(100% + 7px); right: 0;
+      min-width: 196px; background: rgba(255,255,255,.97);
+      border: 1.5px solid rgba(208,223,235,.75); border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(40,64,91,.18); z-index: 200;
+      overflow: hidden; padding: 5px;
+    }
+    .pv-export-wrap.open .pv-export-dropdown { display: block; }
+    .pv-export-drop-item {
+      display: flex; align-items: center; gap: 9px;
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: none; background: transparent;
+      font-size: 13px; font-weight: 600; color: var(--text-strong);
+      cursor: pointer; text-align: left; transition: background .12s;
+    }
+    .pv-export-drop-item:hover { background: rgba(68,107,149,.08); }
+    .pv-export-drop-item svg { width: 14px; height: 14px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  </style>
+</head>
+<body class="bg-frost">
+
+  <div class="preview-wrap">
+
+    <!-- Top bar -->
+    <div class="pv-topbar">
+      <a href="javascript:window.close()" class="pv-back-btn" id="pvBackBtn">
+        <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Close Preview
+      </a>
+      <span class="pv-page-title">Student Answer Preview</span>
+    </div>
+
+    <!-- Student + Exam header card (populated by JS) -->
+    <div class="pv-card glass" id="pvHeaderCard">
+      <div class="pv-card-head">
+        <div class="pv-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span class="pv-card-title">Student Information</span>
+        <!-- Export dropdown — shown after data loads -->
+        <div class="pv-export-wrap" id="pvExportWrap" style="display:none;">
+          <button class="pv-export-trigger" id="pvExportTrigger" type="button">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+            <svg class="pv-exp-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="pv-export-dropdown" id="pvExportDropdown">
+            <button class="pv-export-drop-item" type="button" data-pvexport="csv">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+              Export as CSV
+            </button>
+            <button class="pv-export-drop-item" type="button" data-pvexport="xlsx">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l2 2 4-4"/></svg>
+              Export as Excel (.xlsx)
+            </button>
+            <button class="pv-export-drop-item" type="button" data-pvexport="pdf">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h6"/><path d="M9 9h2"/></svg>
+              Export as PDF
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="pv-card-body" id="pvHeaderBody">
+        <div class="pv-status">
+          <div class="pv-status-spinner"></div>
+          Loading student information…
+        </div>
+      </div>
+    </div>
+
+    <!-- Answer cards -->
+    <div class="pv-card glass" id="pvAnswerCard" style="display:none;">
+      <div class="pv-card-head">
+        <div class="pv-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
+        </div>
+        <span class="pv-card-title">Extracted Answers</span>
+      </div>
+      <div class="pv-card-body" id="pvAnswerBody">
+        <div class="pv-status">
+          <div class="pv-status-spinner"></div>
+          Loading answers…
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script src="../js/student-answer-preview.js?v=1"></script>
+
+</body>
+</html>

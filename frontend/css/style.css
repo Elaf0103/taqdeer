@@ -1,0 +1,781 @@
+/* =========================================================
+   TAQDEER — Global CSS (Glassmorphism + Poppins)
+   Palette preserved:
+   - Frosted Mist:   #D0DFEB
+   - Powder Blue:    #98B9D4
+   - Ice Lake:       #6895BC
+   - Arctic Sky:     #446B95
+   - Midnight Frost: #28405B
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
+
+/* ---------- Design Tokens ---------- */
+:root {
+  /* Brand Palette */
+  --c-frosted: #D0DFEB;
+  --c-powder:  #98B9D4;
+  --c-ice:     #6895BC;
+  --c-arctic:  #446B95;
+  --c-midnight:#28405B;
+
+  /* Text */
+  --text-strong: rgba(18, 36, 58, 0.95);
+  --text:        rgba(18, 36, 58, 0.78);
+  --text-muted:  rgba(18, 36, 58, 0.50);
+  --text-inv:    rgba(255, 255, 255, 0.97);
+
+  /* Glass surfaces — more opaque for readability */
+  --glass:           rgba(255, 255, 255, 0.54);
+  --glass-strong:    rgba(255, 255, 255, 0.70);
+  --glass-border:    rgba(255, 255, 255, 0.74);
+  --glass-shadow:    0 8px 32px rgba(40, 64, 91, 0.13),
+                     0 2px 8px rgba(40, 64, 91, 0.07),
+                     inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  --glass-shadow-soft: 0 4px 16px rgba(40, 64, 91, 0.09),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.78);
+
+  /* Sidebar — soft off-white frosted glass, consistent with panel */
+  --sb-bg:          rgba(255, 253, 250, 0.76);
+  --sb-border:      rgba(208, 223, 235, 0.55);
+  --sb-text:        rgba(18, 36, 58, 0.88);
+  --sb-text-muted:  rgba(18, 36, 58, 0.42);
+  --sb-hover:       rgba(104, 149, 188, 0.12);
+  --sb-active:      rgba(104, 149, 188, 0.18);
+  --sb-active-border: rgba(104, 149, 188, 0.42);
+
+  /* Radius scale */
+  --radius-xl: 26px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  /* Spacing */
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Blur */
+  --blur: 20px;
+  --blur-sm: 12px;
+
+  /* Focus ring */
+  --focus: rgba(104, 149, 188, 0.36);
+
+  /* Transitions */
+  --t: 200ms ease;
+}
+
+/* ---------- Base Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--text);
+  line-height: 1.55;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* ── Layout: body is the fixed background canvas ─── */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;       /* perfect vertical centering */
+  justify-content: center;
+  padding: 24px;
+
+  /* ── Background: the provided background image, fixed so it stays still
+     while the panel content scrolls inside it.
+     A very subtle dark overlay (layer 1) ensures the UI stays legible. ── */
+  background-color: #3a5f82;  /* fallback while image loads */
+  background-image:
+    linear-gradient(rgba(6, 18, 40, 0.28), rgba(6, 18, 40, 0.28)),
+    url("../assets/background-website.jpg");
+  background-size: cover, cover;
+  background-position: center, center;
+  background-attachment: fixed, fixed;
+}
+
+/* Auth / landing pages — same background image, no floating-panel padding */
+body.bg-frost {
+  padding: 0;
+  background-color: #3a5f82;
+  background-image:
+    linear-gradient(rgba(6, 18, 40, 0.22), rgba(6, 18, 40, 0.22)),
+    url("../assets/background-website.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* ---------- Links ---------- */
+a {
+  color: var(--c-arctic);
+  text-decoration: none;
+  transition: color var(--t);
+}
+a:hover { color: var(--c-midnight); }
+
+/* ---------- Common Container ---------- */
+.container {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: var(--space-6) 0;
+}
+
+/* =========================================================
+   APP LAYOUT — Floating Glass Dashboard Panel
+   ========================================================= */
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+
+  /* ── Panel dimensions: elegant card proportions ─── */
+  width: 100%;
+  max-width: 1600px;             /* wider panel — uses more available screen width */
+  height: calc(100vh - 48px);   /* 24px top + 24px bottom padding */
+  min-height: 560px;
+
+  /* ── Floating glass surface ─── */
+  border-radius: 28px;
+  /* overflow: hidden clips child backgrounds to the rounded corners.
+     Horizontal overflow within main is handled by main itself (overflow-x:auto).
+     Dropdowns/modals use position:fixed and are unaffected. */
+  overflow: hidden;
+  position: relative;
+
+  /* ── Off-white frosted glass: solid at top, fades transparent toward bottom ─── */
+  background: linear-gradient(180deg,
+    rgba(248, 252, 255, 0.68)  0%,
+    rgba(248, 252, 255, 0.52) 35%,
+    rgba(248, 252, 255, 0.26) 65%,
+    rgba(248, 252, 255, 0.07) 100%);
+
+  /* Unified frosted glass blur for the whole panel */
+  backdrop-filter: blur(32px) saturate(1.2);
+  -webkit-backdrop-filter: blur(32px) saturate(1.2);
+
+  /* ── Premium floating shadow + bright top edge ─── */
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow:
+    0 48px 100px rgba(4, 14, 36, 0.40),
+    0 16px 40px  rgba(4, 14, 36, 0.22),
+    0  4px 12px  rgba(4, 14, 36, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.60);
+}
+
+@media (max-width: 980px) {
+  body {
+    padding: 0;
+    display: block;
+  }
+  .app {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    max-width: 100%;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: none;
+    overflow: visible;
+  }
+}
+
+/* =========================================================
+   GLASS UTILITIES
+   ========================================================= */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--blur)) saturate(1.6);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.6);
+}
+
+.glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(var(--blur-sm)) saturate(1.5);
+  -webkit-backdrop-filter: blur(var(--blur-sm)) saturate(1.5);
+}
+
+.card { padding: var(--space-5); }
+.card + .card { margin-top: var(--space-4); }
+
+.lift {
+  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 50px rgba(40, 64, 91, 0.16),
+              inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.90);
+}
+
+/* =========================================================
+   TYPOGRAPHY — Poppins
+   ========================================================= */
+h1, h2, h3, h4 {
+  margin: 0 0 10px;
+  color: var(--text-strong);
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+h1 { font-size: 28px; font-weight: 800; }
+h2 { font-size: 22px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 600; }
+h4 { font-size: 15px; font-weight: 600; }
+p  { margin: 0 0 10px; color: var(--text); font-size: 14px; }
+.small { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+.muted { color: var(--text-muted); }
+
+/* =========================================================
+   SIDEBAR — soft off-white frosted glass panel
+   !important overrides the height/position inline styles
+   that every page sets in its own <style> block.
+   Mobile uses position:fixed !important (inline) which
+   correctly overrides here — so toggle behavior is preserved.
+   ========================================================= */
+.sidebar {
+  /* Override every page's inline min-height:100vh / position:sticky */
+  height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0;              /* prevent CSS grid item from expanding beyond 240px track */
+  position: relative !important;
+  top: auto !important;
+
+  /* Internal scroll for long nav lists */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: var(--space-4);
+  border-radius: 0;
+
+  /* ── Off-white frosted glass sidebar ──
+     The .app backdrop-filter already blurs the page background.
+     Sidebar uses an opaque-enough off-white so it reads cleanly. */
+  background: var(--sb-bg);
+  border-right: 1px solid var(--sb-border);
+  box-shadow: 2px 0 16px rgba(40, 64, 91, 0.07);
+  color: var(--sb-text);
+}
+
+/* Thin scrollbar for sidebar */
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(104,149,188,0.22); border-radius: 2px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+
+.sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px 16px;
+  border-bottom: 1px solid rgba(208, 223, 235, 0.55);
+  margin-bottom: var(--space-3);
+}
+.sidebar .brand .logo {
+  /* 6rem container; mark ≈ 38% × 96px ≈ 36px — matches ~20px/700 wordmark cap height */
+  width: 6rem;
+  height: 6rem;
+  display: block;
+  object-fit: contain;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  flex-shrink: 0;
+  /* Right transparent edge ≈ 17% × 96px ≈ 16px; pull in to leave ~8px visual gap */
+  margin-right: -0.5rem;
+}
+/* Auth pages (login / register / reset-password) */
+.auth .logo {
+  /* 10rem container; mark ≈ 38% × 160px ≈ 61px — visually prominent above the h2 */
+  width: auto;
+  height: auto;
+  max-height: 10rem;
+  object-fit: contain;
+  display: block;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  /* Bottom transparent ≈ 38.5% × 160px ≈ 62px; pull h2 up to ~8px gap → -3.3rem */
+  margin-bottom: -3.3rem !important;
+}
+.sidebar .brand .name {
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--sb-text);
+  letter-spacing: -0.01em;
+}
+
+/* Nav */
+.nav {
+  display: grid;
+  gap: 3px;
+  padding-top: var(--space-3);
+}
+
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--sb-text);
+  transition: background var(--t), color var(--t), border-color var(--t);
+  border: 1px solid transparent;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.nav a:hover {
+  background: var(--sb-hover);
+  color: var(--text-strong);
+}
+
+.nav a.active {
+  background: var(--sb-active);
+  border-color: var(--sb-active-border);
+  color: var(--c-arctic);
+}
+
+.sidebar .small,
+.sidebar .muted { color: var(--sb-text-muted); }
+
+.nav i,
+.nav svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+
+.nav a svg {
+  width: 17px;
+  height: 17px;
+  transition: transform 0.2s ease;
+}
+.nav a:hover svg { transform: scale(1.1); }
+
+/* Avatar */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(104, 149, 188, 0.14);
+  border: 1px solid rgba(104, 149, 188, 0.28);
+  box-shadow: 0 2px 8px rgba(40, 64, 91, 0.09);
+}
+
+/* =========================================================
+   CONTENT AREA — scrolls within the floating panel
+   ========================================================= */
+main {
+  padding: 20px 22px;
+  min-width: 0;     /* critical: prevents CSS grid item from expanding beyond its 1fr track */
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: auto; /* scroll wide content rather than clipping it — affects ALL pages globally */
+}
+
+/* Thin scrollbar for main content */
+main::-webkit-scrollbar { width: 5px; height: 5px; }
+main::-webkit-scrollbar-thumb { background: rgba(104, 149, 188, 0.28); border-radius: 3px; }
+main::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 980px) {
+  main {
+    padding: 16px;
+    height: auto;
+    overflow-y: visible;
+  }
+}
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 720px) {
+  .topbar { flex-direction: column; align-items: stretch; }
+}
+
+/* Search */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  background: rgba(255, 255, 255, 0.44);
+  backdrop-filter: blur(var(--blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.4);
+  box-shadow: 0 2px 12px rgba(40, 64, 91, 0.07),
+              inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+.search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 280px;
+  max-width: 100%;
+  color: var(--text-strong);
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+}
+.search input::placeholder { color: rgba(18, 36, 58, 0.38); }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+.btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  background: rgba(255, 255, 255, 0.46);
+  color: var(--text-strong);
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform var(--t), box-shadow var(--t), background var(--t), border-color var(--t);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(40, 64, 91, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(40, 64, 91, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.90);
+  background: rgba(255, 255, 255, 0.60);
+}
+.btn:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(40, 64, 91, 0.08); }
+
+.btn-primary {
+  border: 1px solid rgba(68, 107, 149, 0.28);
+  background: linear-gradient(135deg, var(--c-arctic) 0%, var(--c-midnight) 100%);
+  color: var(--text-inv);
+  box-shadow: 0 4px 16px rgba(68, 107, 149, 0.32);
+}
+.btn-primary:hover {
+  box-shadow: 0 8px 28px rgba(68, 107, 149, 0.44);
+  background: linear-gradient(135deg, #4e7aaa 0%, #314f6a 100%);
+  border-color: rgba(104, 149, 188, 0.42);
+}
+
+.btn-soft {
+  background: rgba(208, 223, 235, 0.44);
+  border-color: rgba(208, 223, 235, 0.65);
+}
+.btn-danger {
+  border: 1px solid rgba(40, 64, 91, 0.18);
+  background: rgba(40, 64, 91, 0.08);
+  color: var(--c-midnight);
+}
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* =========================================================
+   FORM CONTROLS
+   ========================================================= */
+.input, select, textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--text-strong);
+  outline: none;
+  transition: box-shadow var(--t), border-color var(--t), background var(--t);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  font-family: 'Poppins', sans-serif;
+  font-size: 13.5px;
+  box-shadow: inset 0 1px 3px rgba(40, 64, 91, 0.06),
+              0 1px 0 rgba(255, 255, 255, 0.74);
+}
+.input::placeholder, textarea::placeholder { color: rgba(18, 36, 58, 0.36); }
+.input:focus, select:focus, textarea:focus {
+  border-color: rgba(104, 149, 188, 0.88);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 0 0 4px var(--focus),
+              inset 0 1px 2px rgba(40, 64, 91, 0.04);
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   PILLS
+   ========================================================= */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  color: var(--text-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 4px rgba(40, 64, 91, 0.07);
+}
+.pill.blue {
+  background: rgba(104, 149, 188, 0.18);
+  border-color: rgba(152, 185, 212, 0.65);
+  color: var(--c-arctic);
+}
+
+/* =========================================================
+   EXAM ITEM CARDS
+   ========================================================= */
+.exam-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(var(--blur)) saturate(1.5);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.5);
+  box-shadow: 0 4px 18px rgba(40, 64, 91, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  transition: transform var(--t), box-shadow var(--t);
+}
+.exam-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(40, 64, 91, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+.exam-item + .exam-item { margin-top: var(--space-3); }
+
+.exam-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.exam-title h3 { margin: 0; }
+
+.exam-meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.exam-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+.table-wrap {
+  overflow: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(var(--blur)) saturate(1.5);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.5);
+  box-shadow: 0 4px 20px rgba(40, 64, 91, 0.09),
+              inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+th, td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(208, 223, 235, 0.42);
+  text-align: left;
+  font-size: 13px;
+}
+th {
+  color: var(--text-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(208, 223, 235, 0.28);
+}
+td { color: var(--text); font-weight: 400; }
+tr:hover td { background: rgba(255, 255, 255, 0.40); }
+
+/* =========================================================
+   DROPDOWN — high z-index so it clears glass cards
+   ========================================================= */
+.dropdown { position: relative; display: inline-block; }
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.80);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 8px 32px rgba(40, 64, 91, 0.14),
+              inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(var(--blur)) saturate(1.7);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.7);
+  z-index: 200;
+}
+.dropdown-menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.dropdown-menu a:hover {
+  background: rgba(208, 223, 235, 0.38);
+  color: var(--text-strong);
+}
+.dropdown.open .dropdown-menu { display: block; }
+
+/* =========================================================
+   ALERTS
+   ========================================================= */
+.alert {
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 2px 10px rgba(40, 64, 91, 0.07);
+}
+.alert.info {
+  border-color: rgba(152, 185, 212, 0.72);
+  background: rgba(152, 185, 212, 0.22);
+}
+.alert.success {
+  border-color: rgba(104, 149, 188, 0.72);
+  background: rgba(104, 149, 188, 0.18);
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+.page-title { margin: 0 0 10px; }
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* =========================================================
+   AUTH PAGES — full-viewport, no floating panel
+   ========================================================= */
+.auth {
+  /* Fill the body flex container on bg-frost pages */
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.auth-card {
+  width: min(440px, 100%);
+  padding: 32px;
+}
+
+/* =========================================================
+   FOOTER SPACING
+   ========================================================= */
+.footer-space { height: 28px; }
+
+/* =========================================================
+   LOGOUT MODAL
+   ========================================================= */
+.logout-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 15, 38, 0.52);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.28s ease;
+  z-index: 9999;
+}
+
+.logout-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.logout-modal {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  padding: 36px 32px;
+  border-radius: 24px;
+  text-align: center;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.17),
+              inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  transform: scale(0.94) translateY(10px);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logout-overlay.active .logout-modal {
+  transform: scale(1) translateY(0);
+}
+
+.logout-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}

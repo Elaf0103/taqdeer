@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar (admin layout) ──────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    /* sidebar-overlay: hidden on desktop, shown on mobile via JS */
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+    .sidebar-overlay.open { display: block; }
+
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid !important; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 14px 20px; margin-bottom: 24px;
+      border-radius: var(--radius-lg);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .sidebar-toggle {
+      display: none; width: 36px; height: 36px; border-radius: 10px;
+      border: 1px solid var(--glass-border); background: rgba(255,255,255,0.22);
+      place-items: center; cursor: pointer;
+    }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .bc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 14px 5px 5px; border-radius: 999px;
+      background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border);
+      font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer;
+      transition: background var(--t);
+    }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800;
+    }
+
+    /* ── Admin role badge in sidebar ─────────────────────────────────────────── */
+    .admin-role-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin: 8px 8px 4px;
+      padding: 5px 11px; border-radius: 999px;
+      font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+      background: rgba(68,107,149,0.22); color: rgba(152,185,212,0.95);
+      border: 1px solid rgba(152,185,212,0.2);
+    }
+    .admin-role-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Toolbar ─────────────────────────────────────────────────────────────── */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 14px 16px; border-radius: var(--radius-lg); margin-bottom: 18px;
+    }
+    .search-box {
+      flex: 1; min-width: 200px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 14px; border-radius: 11px;
+      background: rgba(255,255,255,0.35); border: 1.5px solid rgba(208,223,235,0.7);
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .search-box:focus-within { border-color: var(--c-ice); box-shadow: 0 0 0 3px rgba(104,149,188,.12); }
+    .search-box svg { width: 15px; height: 15px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .search-box input { border: none; background: transparent; outline: none; font-size: 13px; color: var(--text-strong); width: 100%; }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    .btn-add {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .1s; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(68,107,149,.3);
+    }
+    .btn-add:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-add:active { transform: translateY(0); }
+    .btn-add svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Table card ──────────────────────────────────────────────────────────── */
+    .table-card { border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 20px; }
+    .table-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid rgba(208,223,235,0.45);
+    }
+    .tch-title { font-size: 14px; font-weight: 700; color: var(--text-strong); }
+    .tch-count { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .tbl-wrap { overflow-x: auto; }
+
+    /* Override global table min-width so it doesn't break layout */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 0; }
+
+    thead th {
+      padding: 11px 20px; text-align: left;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-muted); background: rgba(208,223,235,0.18);
+      border-bottom: 1px solid rgba(208,223,235,0.45); white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid rgba(208,223,235,0.3); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.35); }
+    tbody td { padding: 14px 20px; color: var(--text-strong); vertical-align: middle; }
+
+    .inst-cell { display: flex; align-items: center; gap: 10px; }
+    .inst-av {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 800;
+    }
+    .inst-name { font-weight: 600; color: var(--text-strong); }
+    .inst-id   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .email-cell { color: var(--text); font-size: 12px; }
+
+    .dept-pill {
+      display: inline-flex; padding: 3px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(68,107,149,0.1); color: var(--c-midnight);
+    }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .status-badge.active       { background: rgba(16,185,129,0.12); color: #065f46; }
+    .status-badge.active::before { background: #10b981; }
+    .status-badge.deactivated  { background: rgba(148,163,184,0.18); color: #64748b; }
+    .status-badge.deactivated::before { background: #94a3b8; }
+
+    .date-cell { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+    .btn-deactivate {
+      padding: 7px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
+      border: 1.5px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.07);
+      color: #dc2626; cursor: pointer; transition: all .18s; white-space: nowrap;
+    }
+    .btn-deactivate:hover { background: rgba(239,68,68,0.14); border-color: rgba(239,68,68,0.55); }
+
+    .btn-activate {
+      padding: 7px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
+      border: 1.5px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.07);
+      color: #059669; cursor: pointer; transition: all .18s; white-space: nowrap;
+    }
+    .btn-activate:hover { background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.55); }
+
+    /* ── Empty state ─────────────────────────────────────────────────────────── */
+    .empty-wrap { text-align: center; padding: 64px 24px; }
+    .empty-ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(208,223,235,0.3);
+      display: grid; place-items: center; margin: 0 auto 18px;
+    }
+    .empty-ring svg { width: 32px; height: 32px; stroke: rgba(40,64,91,.3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .empty-wrap h3 { margin: 0 0 6px; font-size: 16px; color: var(--text-strong); }
+    .empty-wrap p  { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* ── Confirm Modal ───────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(10,28,52,.48);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+
+    .modal-box {
+      background: #f7fbff; border: 1px solid var(--glass-border);
+      border-radius: 22px; width: 100%; max-width: 420px;
+      padding: 36px 32px 28px; text-align: center;
+      box-shadow: 0 32px 80px rgba(40,64,91,.28);
+      transform: scale(.94) translateY(14px);
+      transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+    }
+    .modal-overlay.open .modal-box { transform: scale(1) translateY(0); }
+
+    .modal-icon-ring {
+      width: 60px; height: 60px; border-radius: 50%;
+      display: grid; place-items: center; margin: 0 auto 18px;
+    }
+    .modal-icon-ring.deactivate { background: rgba(239,68,68,0.1); }
+    .modal-icon-ring.activate   { background: rgba(16,185,129,0.1); }
+    .modal-icon-ring svg { width: 26px; height: 26px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .modal-icon-ring.deactivate svg { stroke: #ef4444; }
+    .modal-icon-ring.activate   svg { stroke: #10b981; }
+
+    .modal-box h3 { margin: 0 0 10px; font-size: 17px; color: var(--text-strong); }
+    .modal-box p  { margin: 0 0 28px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    .modal-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-cancel {
+      padding: 10px 22px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4);
+      color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-confirm-deactivate {
+      padding: 10px 22px; border-radius: 10px; border: none;
+      background: #ef4444; color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s; box-shadow: 0 4px 14px rgba(239,68,68,.3);
+    }
+    .btn-confirm-deactivate:hover { opacity: .85; }
+    .btn-confirm-activate {
+      padding: 10px 22px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #34d399, #059669); color: #fff;
+      font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s;
+      box-shadow: 0 4px 14px rgba(16,185,129,.3);
+    }
+    .btn-confirm-activate:hover { opacity: .85; }
+
+    /* ── Logout modal ────────────────────────────────────────────────────────── */
+    .logout-overlay {
+      position: fixed; inset: 0; background: rgba(0,20,40,.55);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .25s; z-index: 300;
+    }
+    .logout-overlay.active { opacity: 1; visibility: visible; }
+    .logout-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 400px; max-width: 92%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s;
+    }
+    .logout-overlay.active .logout-modal { transform: scale(1); }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions  { display: flex; justify-content: center; gap: 12px; }
+
+    /* ── Unauthorized screen ─────────────────────────────────────────────────── */
+    #unauthorizedScreen {
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      background: linear-gradient(180deg,#f7fbff,#eaf3fb);
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 32px;
+    }
+    #unauthorizedScreen.visible { display: flex; }
+    .unauth-ring {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: rgba(239,68,68,0.1);
+      display: grid; place-items: center; margin: 0 auto 22px;
+    }
+    .unauth-ring svg { width: 36px; height: 36px; stroke: #ef4444; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    #unauthorizedScreen h2 { margin: 0 0 8px; font-size: 22px; color: var(--text-strong); }
+    #unauthorizedScreen p  { margin: 0 0 24px; font-size: 14px; color: var(--text-muted); }
+    .btn-go-login {
+      padding: 11px 24px; border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(68,107,149,.3); transition: opacity .18s;
+    }
+    .btn-go-login:hover { opacity: .88; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 26px; right: 26px; z-index: 400;
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 20px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; color: #fff;
+      box-shadow: 0 10px 32px rgba(0,0,0,.2);
+      transform: translateY(90px); opacity: 0;
+      transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+    /* ── Create Instructor Modal ─────────────────────────────────────────────── */
+    .create-overlay {
+      position: fixed; inset: 0; z-index: 250;
+      background: rgba(10,28,52,.48);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
+    }
+    .create-overlay.open { opacity: 1; visibility: visible; }
+
+    .create-modal {
+      background: #f7fbff; border: 1px solid var(--glass-border);
+      border-radius: 22px; width: 100%; max-width: 480px;
+      padding: 32px; box-shadow: 0 32px 80px rgba(40,64,91,.28);
+      transform: scale(.94) translateY(14px);
+      transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .create-overlay.open .create-modal { transform: scale(1) translateY(0); }
+
+    .create-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .create-modal-title { font-size: 17px; font-weight: 700; color: var(--text-strong); }
+    .btn-close-modal {
+      width: 32px; height: 32px; border-radius: 9px; border: none;
+      background: rgba(208,223,235,0.4); cursor: pointer;
+      display: grid; place-items: center; transition: background .15s;
+    }
+    .btn-close-modal:hover { background: rgba(208,223,235,0.7); }
+    .btn-close-modal svg { width: 16px; height: 16px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-strong); margin-bottom: 7px; letter-spacing: .02em; }
+    .form-input {
+      width: 100%; padding: 11px 14px; border-radius: 11px; box-sizing: border-box;
+      border: 1.5px solid rgba(208,223,235,0.8); background: rgba(255,255,255,0.6);
+      font-size: 13px; color: var(--text-strong); outline: none;
+      transition: border-color .18s, box-shadow .18s; font-family: inherit;
+    }
+    .form-input:focus { border-color: var(--c-ice); box-shadow: 0 0 0 3px rgba(104,149,188,.12); }
+    .form-input.error { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.1) !important; }
+    .form-input::placeholder { color: var(--text-muted); }
+    .field-error { display: none; margin-top: 5px; font-size: 11px; color: #dc2626; font-weight: 600; }
+    .field-error.visible { display: block; }
+
+    .create-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+    .btn-create {
+      padding: 11px 24px; border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .1s;
+      box-shadow: 0 4px 16px rgba(68,107,149,.3);
+    }
+    .btn-create:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-create:active:not(:disabled) { transform: translateY(0); }
+    .btn-create:disabled { opacity: .6; cursor: not-allowed; }
+  </style>
+  <script src="../js/api.js"></script>
+</head>
+<body class="bg-frost">
+
+<!-- ══ UNAUTHORIZED SCREEN (shown if not admin) ══════════════════════════════ -->
+<div id="unauthorizedScreen">
+  <div class="unauth-ring">
+    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  </div>
+  <h2>Access Restricted</h2>
+  <p>This area is for administrators only.<br>Please sign in with an admin account.</p>
+  <button class="btn-go-login" onclick="window.location.href='../pages/login.html'">Go to Login</button>
+</div>
+
+<!-- ══ APP SHELL ══════════════════════════════════════════════════════════════ -->
+<div class="app" id="appShell">
+
+  <!-- ── ADMIN SIDEBAR ───────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+
+    <!-- Admin role pill -->
+    <div class="admin-role-badge">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin
+    </div>
+
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted" style="margin-top:10px;">ADMIN</p>
+        <a href="./admin-dashborad.html" class="active">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Manage Instructors</span>
+        </a>
+
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./admin-profile.html">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Admin Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────────────────────── -->
+  <main>
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 style="margin:0;font-size:20px;">Admin Panel</h2>
+          <div class="bc">Admin &rsaquo; Manage Instructors</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="./admin-profile.html" class="user-chip">
+          <div class="chip-av" id="chipAvatar">A</div>
+          <span id="chipName">Admin</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar glass">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search by name, email, or department…" />
+      </div>
+      <button class="btn-add" id="btnCreateInstructor">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create Instructor
+      </button>
+    </div>
+
+    <!-- Instructors Table -->
+    <div class="table-card glass" style="animation: fadeUp .35s ease both;">
+      <div class="table-card-header">
+        <div>
+          <div class="tch-title">Instructor Accounts</div>
+          <div class="tch-count" id="countLabel">Showing all instructors</div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table id="instructorTable">
+          <thead>
+            <tr>
+              <th>Instructor</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Account Status</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div class="empty-wrap" id="emptyState" style="display:none;">
+          <div class="empty-ring">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>No instructors found</h3>
+          <p>Try adjusting your search or create a new instructor account.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- sidebar-overlay lives OUTSIDE .app so it doesn't become a 3rd grid child -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══ CONFIRM MODAL ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal-box">
+    <div class="modal-icon-ring" id="modalIconRing">
+      <svg id="modalIcon" viewBox="0 0 24 24"></svg>
+    </div>
+    <h3 id="modalTitle"></h3>
+    <p id="modalMessage"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button id="modalConfirm"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CREATE INSTRUCTOR MODAL ════════════════════════════════════════════════ -->
+<div class="create-overlay" id="createOverlay">
+  <div class="create-modal" id="createModal">
+    <div class="create-modal-header">
+      <div class="create-modal-title">Create Instructor Account</div>
+      <button class="btn-close-modal" id="btnCloseCreate">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Title + Full Name row -->
+    <div style="display:flex; gap:10px; align-items:flex-start;">
+      <div class="form-group" style="flex:0 0 110px; margin-bottom:18px;">
+        <label class="form-label" for="inTitle">Title</label>
+        <select class="form-input" id="inTitle" style="padding-right:8px;">
+          <option value="">None</option>
+          <option value="dr">Dr.</option>
+          <option value="prof">Prof.</option>
+          <option value="mr">Mr.</option>
+          <option value="ms">Ms.</option>
+          <option value="mrs">Mrs.</option>
+          <option value="miss">Miss</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1; margin-bottom:18px;">
+        <label class="form-label" for="inFullName">Full Name <span style="color:#dc2626;">*</span></label>
+        <input class="form-input" type="text" id="inFullName" placeholder="e.g. Sarah Al-Mansouri" autocomplete="off" />
+        <div class="field-error" id="errFullName">Full name is required.</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="inEmail">Email Address <span style="color:#dc2626;">*</span></label>
+      <input class="form-input" type="email" id="inEmail" placeholder="Enter instructor email" autocomplete="off" />
+      <div class="field-error" id="errEmail">Please enter a valid email address.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="inDept">Department <span style="color:#dc2626;">*</span></label>
+      <select class="form-input" id="inDept">
+        <option value="">Select department</option>
+        <option value="cs">Computer Science</option>
+        <option value="is">Information Systems</option>
+        <option value="it">Information Technology</option>
+      </select>
+      <div class="field-error" id="errDept">Please select a department.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="inPassword">Initial Password <span style="color:#dc2626;">*</span></label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input class="form-input" type="text" id="inPassword" placeholder="Set an initial password" autocomplete="new-password" style="flex:1;" />
+        <button type="button" id="btnGenPassword" title="Generate a random password"
+          style="flex-shrink:0; padding:10px 13px; border-radius:11px; border:1.5px solid rgba(208,223,235,0.8);
+                 background:rgba(255,255,255,0.6); color:var(--c-arctic); font-size:12px; font-weight:700;
+                 cursor:pointer; white-space:nowrap; transition:background .15s;"
+          onmouseover="this.style.background='rgba(208,223,235,0.55)'"
+          onmouseout="this.style.background='rgba(255,255,255,0.6)'">
+          Generate
+        </button>
+      </div>
+      <div class="field-error" id="errPassword">Password is required (min. 8 characters).</div>
+      <p style="margin:6px 0 0; font-size:11px; color:var(--text-muted);">
+        The instructor can change this password after logging in.
+      </p>
+    </div>
+
+    <div class="create-modal-actions">
+      <button class="btn-cancel" id="btnCancelCreate">Cancel</button>
+      <button class="btn-create" id="btnSubmitCreate">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGOUT MODAL ═══════════════════════════════════════════════════════════ -->
+<div class="logout-overlay" id="logoutOverlay">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign Out</h3>
+    <p>Are you sure you want to sign out of your account?</p>
+    <div class="logout-actions">
+      <button class="btn-cancel" id="logoutCancel">Cancel</button>
+      <button class="btn-confirm-deactivate" id="logoutConfirm">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══════════════════════════════════════════════════════════════════ -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" id="toastIcon"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════════════════
+     ROUTE GUARDS — require login + admin role
+  ══════════════════════════════════════════════════════════════════════════ */
+  authGuard();
+  adminGuard();
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DATA  (loaded from backend on init)
+  ══════════════════════════════════════════════════════════════════════════ */
+  let instructors = [];
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     STATE
+  ══════════════════════════════════════════════════════════════════════════ */
+  let pendingRowId  = null;
+  let pendingAction = null; // 'deactivate' | 'activate'
+  let searchQuery   = '';
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DOM REFS
+  ══════════════════════════════════════════════════════════════════════════ */
+  const tableBody      = document.getElementById('tableBody');
+  const emptyState     = document.getElementById('emptyState');
+  const countLabel     = document.getElementById('countLabel');
+  const searchInput    = document.getElementById('searchInput');
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const modalIconRing  = document.getElementById('modalIconRing');
+  const modalIcon      = document.getElementById('modalIcon');
+  const modalTitle     = document.getElementById('modalTitle');
+  const modalMessage   = document.getElementById('modalMessage');
+  const modalCancel    = document.getElementById('modalCancel');
+  const modalConfirm   = document.getElementById('modalConfirm');
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     PROFILE CHIP — synced with taqdeer_profile (set on login)
+  ══════════════════════════════════════════════════════════════════════════ */
+  (function syncChip() {
+    const p        = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    const name     = p ? (getDisplayName(p) || 'Admin') : 'Admin';
+    const avatarUrl = (p && p.avatarPath) ? API_BASE + '/' + p.avatarPath : null;
+    const initials = name.split(' ').filter(w => /[A-Za-z]/.test(w))
+                       .slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'A';
+    const chipAv = document.getElementById('chipAvatar');
+    document.getElementById('chipName').textContent = name;
+    if (avatarUrl) {
+      chipAv.innerHTML = `<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+    } else {
+      chipAv.textContent = initials;
+    }
+  })();
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     RENDER TABLE
+  ══════════════════════════════════════════════════════════════════════════ */
+  function getInitials(name) {
+    return name.split(' ').filter(w => /[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  }
+
+  function fmtDate(isoStr) {
+    if (!isoStr) return '—';
+    return new Date(isoStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderTable() {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = instructors.filter(i =>
+      (i.fullName  || '').toLowerCase().includes(q) ||
+      (i.email     || '').toLowerCase().includes(q) ||
+      (i.department|| '').toLowerCase().includes(q)
+    );
+
+    countLabel.textContent = filtered.length === instructors.length
+      ? `Showing all ${instructors.length} instructors`
+      : `Showing ${filtered.length} of ${instructors.length} instructors`;
+
+    if (filtered.length === 0) {
+      tableBody.innerHTML = '';
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    tableBody.innerHTML = filtered.map(inst => {
+      const isActive   = inst.isActive;
+      const badgeClass = isActive ? 'active' : 'deactivated';
+      const badgeLabel = isActive ? 'Active' : 'Deactivated';
+      const actionBtn  = isActive
+        ? `<button class="btn-deactivate" data-id="${inst.id}">Deactivate</button>`
+        : `<button class="btn-activate"   data-id="${inst.id}">Activate</button>`;
+
+      return `
+        <tr data-id="${inst.id}">
+          <td>
+            <div class="inst-cell">
+              <div class="inst-av">${getInitials(inst.fullName || inst.email)}</div>
+              <div>
+                <div class="inst-name">${inst.fullName || inst.email}</div>
+                <div class="inst-id">#INS-${String(inst.id).padStart(3, '0')}</div>
+              </div>
+            </div>
+          </td>
+          <td class="email-cell">${inst.email}</td>
+          <td><span class="dept-pill">${(inst.department || '').toUpperCase() || '—'}</span></td>
+          <td><span class="status-badge ${badgeClass}">${badgeLabel}</span></td>
+          <td class="date-cell">${fmtDate(inst.createdAt)}</td>
+          <td>${actionBtn}</td>
+        </tr>`;
+    }).join('');
+
+    tableBody.querySelectorAll('.btn-deactivate').forEach(btn =>
+      btn.addEventListener('click', () => openConfirm(+btn.dataset.id, 'deactivate')));
+    tableBody.querySelectorAll('.btn-activate').forEach(btn =>
+      btn.addEventListener('click', () => openConfirm(+btn.dataset.id, 'activate')));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CONFIRM MODAL
+  ══════════════════════════════════════════════════════════════════════════ */
+  function openConfirm(id, action) {
+    pendingRowId  = id;
+    pendingAction = action;
+
+    if (action === 'deactivate') {
+      modalIconRing.className  = 'modal-icon-ring deactivate';
+      modalIcon.innerHTML      = '<path d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>';
+      modalTitle.textContent   = 'Confirm Deactivation';
+      modalMessage.textContent = 'Are you sure you want to deactivate this instructor account? The instructor will no longer be able to access the system.';
+      modalConfirm.className   = 'btn-confirm-deactivate';
+      modalConfirm.textContent = 'Confirm';
+    } else {
+      modalIconRing.className  = 'modal-icon-ring activate';
+      modalIcon.innerHTML      = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+      modalTitle.textContent   = 'Confirm Activation';
+      modalMessage.textContent = 'Are you sure you want to activate this instructor account?';
+      modalConfirm.className   = 'btn-confirm-activate';
+      modalConfirm.textContent = 'Confirm';
+    }
+
+    confirmOverlay.classList.add('open');
+  }
+
+  function closeConfirm() {
+    confirmOverlay.classList.remove('open');
+    pendingRowId  = null;
+    pendingAction = null;
+  }
+
+  modalCancel.addEventListener('click', closeConfirm);
+  confirmOverlay.addEventListener('click', e => { if (e.target === confirmOverlay) closeConfirm(); });
+
+  modalConfirm.addEventListener('click', async () => {
+    if (pendingRowId === null) return;
+    const inst      = instructors.find(i => i.id === pendingRowId);
+    if (!inst) return;
+
+    const wasAction  = pendingAction;
+    const setActive  = wasAction === 'activate';
+    closeConfirm();
+
+    try {
+      const updated = await apiFetch(
+        `/admin/users/${inst.id}/active?active=${setActive}`,
+        { method: 'PATCH' },
+      );
+      // Merge updated fields into local array
+      Object.assign(inst, updated);
+      renderTable();
+      showToast(
+        setActive
+          ? `${inst.fullName}'s account has been activated.`
+          : `${inst.fullName}'s account has been deactivated.`,
+        'success',
+      );
+    } catch (err) {
+      showToast(err.message || 'Action failed. Please try again.', 'error');
+    }
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     SEARCH
+  ══════════════════════════════════════════════════════════════════════════ */
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    renderTable();
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     TOAST
+  ══════════════════════════════════════════════════════════════════════════ */
+  function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon  = document.getElementById('toastIcon');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.className = `toast ${type}`;
+    icon.innerHTML  = type === 'success'
+      ? '<polyline points="20 6 9 17 4 12"/>'
+      : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3400);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     SIDEBAR MOBILE TOGGLE
+  ══════════════════════════════════════════════════════════════════════════ */
+  const sidebarEl      = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebarEl.classList.toggle('mobile-open');
+    sidebarOverlay.classList.toggle('open');
+  });
+  sidebarOverlay.addEventListener('click', () => {
+    sidebarEl.classList.remove('mobile-open');
+    sidebarOverlay.classList.remove('open');
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOGOUT
+  ══════════════════════════════════════════════════════════════════════════ */
+  const logoutOverlay = document.getElementById('logoutOverlay');
+  document.getElementById('logoutTrigger').addEventListener('click', e => {
+    e.preventDefault();
+    logoutOverlay.classList.add('active');
+  });
+  document.getElementById('logoutCancel').addEventListener('click', () => {
+    logoutOverlay.classList.remove('active');
+  });
+  document.getElementById('logoutConfirm').addEventListener('click', () => {
+    doLogout();
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     INIT — load instructors from backend
+  ══════════════════════════════════════════════════════════════════════════ */
+  async function loadInstructors() {
+    try {
+      instructors = await apiFetch('/admin/users?role=instructor');
+    } catch (err) {
+      console.error('Failed to load instructors:', err);
+      instructors = [];
+    }
+    renderTable();
+  }
+
+  loadInstructors();
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CREATE INSTRUCTOR MODAL
+  ══════════════════════════════════════════════════════════════════════════ */
+  const createOverlay   = document.getElementById('createOverlay');
+  const inTitle         = document.getElementById('inTitle');
+  const inFullName      = document.getElementById('inFullName');
+  const inEmail         = document.getElementById('inEmail');
+  const inDept          = document.getElementById('inDept');
+  const inPassword      = document.getElementById('inPassword');
+  const btnSubmitCreate = document.getElementById('btnSubmitCreate');
+
+  function openCreateModal() {
+    inTitle.value    = '';
+    inFullName.value = '';
+    inEmail.value    = '';
+    inDept.value     = '';
+    inPassword.value = '';
+    [inFullName, inEmail, inDept, inPassword].forEach(el => el.classList.remove('error'));
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('visible'));
+    btnSubmitCreate.disabled    = false;
+    btnSubmitCreate.textContent = 'Create Account';
+    createOverlay.classList.add('open');
+    setTimeout(() => inFullName.focus(), 250);
+  }
+
+  // Generate a random password: 3 upper + 3 lower + 2 digits + 2 symbols
+  document.getElementById('btnGenPassword').addEventListener('click', () => {
+    const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower   = 'abcdefghjkmnpqrstuvwxyz';
+    const digits  = '23456789';
+    const symbols = '!@#$%^&*';
+    const pick = (src, n) => Array.from({ length: n }, () => src[Math.floor(Math.random() * src.length)]);
+    const chars = [
+      ...pick(upper, 3), ...pick(lower, 3),
+      ...pick(digits, 2), ...pick(symbols, 2),
+    ].sort(() => Math.random() - 0.5);
+    inPassword.value = chars.join('');
+    // Clear any previous error on the field
+    inPassword.classList.remove('error');
+    document.getElementById('errPassword').classList.remove('visible');
+  });
+
+  function closeCreateModal() {
+    createOverlay.classList.remove('open');
+  }
+
+  function validateCreate() {
+    let valid = true;
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    const errName = document.getElementById('errFullName');
+    if (!inFullName.value.trim()) {
+      inFullName.classList.add('error'); errName.classList.add('visible'); valid = false;
+    } else {
+      inFullName.classList.remove('error'); errName.classList.remove('visible');
+    }
+
+    const errEmail = document.getElementById('errEmail');
+    const emailVal = inEmail.value.trim();
+    if (!emailVal) {
+      errEmail.textContent = 'Email address is required.';
+      inEmail.classList.add('error'); errEmail.classList.add('visible'); valid = false;
+    } else if (!emailRe.test(emailVal)) {
+      errEmail.textContent = 'Please enter a valid email address.';
+      inEmail.classList.add('error'); errEmail.classList.add('visible'); valid = false;
+    } else {
+      inEmail.classList.remove('error'); errEmail.classList.remove('visible');
+    }
+
+    const errDept = document.getElementById('errDept');
+    if (!inDept.value) {
+      inDept.classList.add('error'); errDept.classList.add('visible'); valid = false;
+    } else {
+      inDept.classList.remove('error'); errDept.classList.remove('visible');
+    }
+
+    const errPass = document.getElementById('errPassword');
+    if (!inPassword.value || inPassword.value.length < 8) {
+      inPassword.classList.add('error'); errPass.classList.add('visible'); valid = false;
+    } else {
+      inPassword.classList.remove('error'); errPass.classList.remove('visible');
+    }
+
+    return valid;
+  }
+
+  document.getElementById('btnCreateInstructor').addEventListener('click', openCreateModal);
+  document.getElementById('btnCloseCreate').addEventListener('click', closeCreateModal);
+  document.getElementById('btnCancelCreate').addEventListener('click', closeCreateModal);
+  createOverlay.addEventListener('click', e => { if (e.target === createOverlay) closeCreateModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && createOverlay.classList.contains('open')) closeCreateModal();
+  });
+
+  btnSubmitCreate.addEventListener('click', async () => {
+    if (!validateCreate()) return;
+
+    btnSubmitCreate.disabled    = true;
+    btnSubmitCreate.textContent = 'Creating…';
+
+    try {
+      const titleVal = inTitle.value.trim();
+      const nameVal  = inFullName.value.trim();
+      await apiFetch('/admin/create-instructor', {
+        method: 'POST',
+        body: JSON.stringify({
+          fullName:          nameVal,
+          email:             inEmail.value.trim(),
+          department:        inDept.value || null,
+          password:          inPassword.value,
+          professionalTitle: titleVal || null,
+        }),
+      });
+
+      closeCreateModal();
+      // Reload the full list so the new row appears with the real DB id and createdAt
+      await loadInstructors();
+      showToast('Instructor account created', 'success');
+    } catch (err) {
+      btnSubmitCreate.disabled    = false;
+      btnSubmitCreate.textContent = 'Create Account';
+      if (err.status === 409) {
+        const errEmail = document.getElementById('errEmail');
+        inEmail.classList.add('error');
+        errEmail.textContent = 'An account with this email already exists.';
+        errEmail.classList.add('visible');
+      } else {
+        showToast(err.message || 'Something went wrong. Please try again.', 'error');
+      }
+    }
+  });
+
+  // loadInstructors() above already initialises the table on page load.
+</script>
+</body>
+</html>

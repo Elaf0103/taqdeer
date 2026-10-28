@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Answer Files</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/api.js"></script>
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid !important; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 14px 20px; margin-bottom: 24px;
+      border-radius: var(--radius-lg);
+    }
+    .topbar-left h2 { margin: 0; font-size: 20px; }
+    .topbar-left .bc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .sidebar-toggle {
+      display: none; width: 36px; height: 36px; border-radius: 10px;
+      border: 1px solid var(--glass-border); background: rgba(255,255,255,0.22);
+      place-items: center; cursor: pointer;
+    }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 14px 5px 5px; border-radius: 999px;
+      background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border);
+      font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer;
+      transition: background var(--t); text-decoration: none;
+    }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800;
+    }
+
+    /* ── Workflow Progress ───────────────────────────────────────────────────── */
+    .workflow-progress-wrap {
+      margin-bottom: 24px; padding: 24px 28px 20px;
+      border-radius: var(--radius-lg); display: flex; flex-direction: row; align-items: center; gap: 16px;
+    }
+    .wp-steps-outer { flex: 1; order: 2; position: relative; min-width: 0; }
+    .wp-nav-row { display: contents; }
+    .wp-next-wrap { order: 3; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+    .wp-steps-outer::before {
+      content: ''; position: absolute; top: 26px;
+      left: calc(100% / 10); right: calc(100% / 10);
+      height: 2px; background: rgba(208,223,235,.5);
+      border-radius: 2px; z-index: 0;
+    }
+    .wp-fill {
+      position: absolute; top: 26px; left: calc(100% / 10);
+      height: 2px; width: 0; max-width: calc(100% - 2 * (100% / 10));
+      background: linear-gradient(90deg, var(--c-ice), var(--c-arctic));
+      border-radius: 2px; z-index: 1;
+      transition: width .55s cubic-bezier(.4,0,.2,1);
+    }
+    .wp-steps-row { display: flex; position: relative; z-index: 2; }
+    .wp-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
+    .wp-step.upcoming { opacity: .38; cursor: not-allowed; }
+    .wp-step.completed { cursor: pointer; }
+    .wp-step.completed:hover .wp-bubble { transform: scale(1.1); }
+    .wp-step.active { cursor: default; }
+    .wp-bubble {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 17px; font-weight: 800; border: 2.5px solid;
+      transition: all .32s cubic-bezier(.34,1.56,.64,1);
+      position: relative; z-index: 3;
+    }
+    .wp-step.completed .wp-bubble { background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); border-color: var(--c-arctic); color: #fff; }
+    .wp-step.active    .wp-bubble { background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); border-color: var(--c-midnight); color: #fff; box-shadow: 0 0 0 7px rgba(68,107,149,.15), 0 8px 24px rgba(40,64,91,.32); }
+    .wp-step.upcoming  .wp-bubble { background: #fff; border-color: rgba(208,223,235,.95); color: var(--text-muted); }
+    .wp-bubble svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wp-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; text-align: center; line-height: 1.2; }
+    .wp-step.completed .wp-lbl { color: var(--c-arctic); }
+    .wp-step.active    .wp-lbl { color: var(--c-midnight); font-weight: 800; letter-spacing: .06em; }
+    .wp-step.upcoming  .wp-lbl { color: var(--text-muted); }
+    .wp-sep { width: 1px; height: 44px; background: rgba(208,223,235,.6); margin: 0 22px; flex-shrink: 0; align-self: center; }
+    .wp-next-btn {
+      display: flex; align-items: center; gap: 8px; padding: 12px 20px;
+      border-radius: 11px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .1s; white-space: nowrap; flex-shrink: 0;
+      box-shadow: 0 4px 18px rgba(68,107,149,.35); align-self: center;
+    }
+    .wp-next-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .wp-next-btn:disabled { background: rgba(208,223,235,.52); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+    .wp-next-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wp-prev-btn { order: 1; display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 11px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.45); color: var(--text-strong); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, transform .1s; white-space: nowrap; flex-shrink: 0; align-self: center; }
+    .wp-prev-btn:hover { background: rgba(255,255,255,.85); transform: translateY(-1px); }
+    .wp-prev-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 980px) {
+      .wp-bubble { width: 44px; height: 44px; font-size: 15px; }
+      .wp-steps-outer::before { top: 22px; } .wp-fill { top: 22px; }
+      .wp-lbl { font-size: 10px; }
+    }
+    @media (max-width: 760px) {
+      .wp-lbl { display: none; }
+      .wp-bubble { width: 36px; height: 36px; font-size: 13px; }
+      .wp-bubble svg { width: 14px; height: 14px; }
+      .wp-steps-outer::before { top: 18px; } .wp-fill { top: 18px; }
+      .wp-btn-label { display: none; }
+      .wp-prev-btn-label { display: none; }
+      .workflow-progress-wrap { padding: 18px 16px; }
+    }
+    @media (max-width: 500px) { .wp-sep { margin: 0 10px; } .wp-next-btn { padding: 10px 12px; } }
+
+    /* ── Page header ─────────────────────────────────────────────────────────── */
+    .af-page-header { margin-bottom: 22px; }
+    .af-page-header h1 { margin: 0 0 4px; font-size: 22px; color: var(--text-strong); font-weight: 800; }
+    .af-page-header p  { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* ── Cards ───────────────────────────────────────────────────────────────── */
+    .af-card { border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; }
+    .af-card-head {
+      padding: 18px 22px 16px;
+      border-bottom: 1px solid rgba(208,223,235,.45);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .af-card-head-left { display: flex; align-items: center; gap: 12px; }
+    .af-card-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      display: grid; place-items: center;
+    }
+    .af-card-icon svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .af-card-title { font-size: 15px; font-weight: 700; color: var(--text-strong); }
+    .af-card-body { padding: 22px; }
+
+    /* ── Extract Answers button ──────────────────────────────────────────────── */
+    .btn-af-extract {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 13px; border-radius: 9px; font-size: 12px; font-weight: 600;
+      color: var(--c-arctic);
+      background: rgba(68,107,149,0.09);
+      border: 1.5px solid rgba(68,107,149,0.22);
+      cursor: pointer; transition: background var(--t), border-color var(--t);
+    }
+    .btn-af-extract:hover:not(:disabled) {
+      background: rgba(68,107,149,0.16); border-color: rgba(68,107,149,0.38);
+    }
+    .btn-af-extract:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-af-extract svg {
+      width: 13px; height: 13px; stroke: var(--c-arctic);
+      fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    /* Extraction status strip */
+    .af-extract-strip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; margin: 0 22px 14px;
+      border-radius: 10px;
+      background: rgba(68,107,149,0.07);
+      border: 1px solid rgba(68,107,149,0.15);
+      font-size: 13px; font-weight: 500; color: var(--c-arctic);
+    }
+    .af-extract-strip.strip-success {
+      background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.2);
+      color: #065f46;
+    }
+    .af-extract-strip.strip-error {
+      background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.2);
+      color: #991b1b;
+    }
+    .af-extract-strip svg {
+      width: 15px; height: 15px; flex-shrink: 0;
+      stroke: currentColor; fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    @keyframes af-spin { to { transform: rotate(360deg); } }
+    .af-strip-spinner {
+      width: 15px; height: 15px; flex-shrink: 0;
+      border: 2px solid rgba(68,107,149,0.25); border-top-color: var(--c-arctic);
+      border-radius: 50%; animation: af-spin .8s linear infinite;
+    }
+
+    /* ── Badge ───────────────────────────────────────────────────────────────── */
+    .af-card-badges { display: inline-flex; align-items: center; gap: 7px; }
+    .files-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 26px; height: 26px; padding: 0 9px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic));
+      color: #fff; font-size: 12px; font-weight: 700;
+    }
+    .absent-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 26px; height: 26px; padding: 0 9px;
+      border-radius: 999px;
+      background: rgba(245,158,11,0.12);
+      border: 1.5px solid rgba(245,158,11,0.35);
+      color: #92400e; font-size: 12px; font-weight: 700;
+    }
+    .absent-badge::before {
+      content: '';
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #f59e0b; flex-shrink: 0; margin-right: 5px;
+    }
+
+    /* ── Field label ─────────────────────────────────────────────────────────── */
+    .af-field-label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+
+    /* ── Select wrapper ──────────────────────────────────────────────────────── */
+    .af-select-wrap { position: relative; }
+    .af-select-wrap select {
+      width: 100%; appearance: none; -webkit-appearance: none;
+      padding: 11px 40px 11px 14px;
+      border-radius: 11px; border: 1.5px solid rgba(208,223,235,.85);
+      background: rgba(255,255,255,.65); color: var(--text-strong);
+      font-size: 13px; outline: none; cursor: pointer;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .af-select-wrap select:focus { border-color: var(--c-ice); background: #fff; box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+    .af-select-wrap select:disabled { opacity: .55; cursor: not-allowed; }
+    .af-sel-chevron {
+      position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; width: 16px; height: 16px;
+      stroke: var(--text-muted); fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ── Dropzone ────────────────────────────────────────────────────────────── */
+    .af-dropzone {
+      border: 2px dashed rgba(208,223,235,.9); border-radius: 14px;
+      padding: 44px 24px; text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: rgba(255,255,255,.22); margin-top: 20px;
+    }
+    .af-dropzone:hover { border-color: var(--c-ice); background: rgba(104,149,188,.05); }
+    .af-dropzone.dragover { border-color: var(--c-arctic); background: rgba(104,149,188,.09); }
+    .af-dropzone.dz-disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
+    .dz-upload-icon {
+      width: 48px; height: 48px; border-radius: 14px; margin: 0 auto 16px;
+      background: linear-gradient(135deg, rgba(104,149,188,.18), rgba(68,107,149,.18));
+      display: grid; place-items: center;
+    }
+    .dz-upload-icon svg { width: 24px; height: 24px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .dz-main-text { font-size: 15px; font-weight: 700; color: var(--text-strong); margin-bottom: 5px; }
+    .dz-sub-text  { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Upload progress bar ─────────────────────────────────────────────────── */
+    .af-upload-progress {
+      display: none; margin-top: 16px;
+      padding: 14px 18px; border-radius: 12px;
+      background: rgba(104,149,188,.08); border: 1px solid rgba(104,149,188,.2);
+    }
+    .af-upload-progress.show { display: block; }
+    .up-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .up-bar-track { height: 6px; background: rgba(208,223,235,.55); border-radius: 3px; overflow: hidden; }
+    .up-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--c-ice), var(--c-arctic));
+      border-radius: 3px; width: 0%; transition: width .25s;
+    }
+
+    /* ── Inline messages ─────────────────────────────────────────────────────── */
+    .af-msg {
+      margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+      font-size: 12px; font-weight: 600; display: none; align-items: center; gap: 8px;
+    }
+    .af-msg.show { display: flex; }
+    .af-msg.error   { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.2);  color: #c0392b; }
+    .af-msg.warning { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); color: #92400e; }
+    .af-msg.info    { background: rgba(104,149,188,.1); border: 1px solid rgba(104,149,188,.25); color: var(--c-midnight); }
+    .af-msg svg { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Table ───────────────────────────────────────────────────────────────── */
+    .af-table-wrap { overflow-x: auto; }
+    .af-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .af-table thead th {
+      padding: 10px 16px; text-align: left;
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .05em;
+      border-bottom: 1px solid rgba(208,223,235,.6);
+      background: rgba(208,223,235,.18); white-space: nowrap;
+    }
+    .af-table thead th:first-child { border-radius: 0; }
+    .af-table tbody td {
+      padding: 13px 16px; border-bottom: 1px solid rgba(208,223,235,.35);
+      color: var(--text-strong); vertical-align: middle;
+    }
+    .af-table tbody tr:last-child td { border-bottom: none; }
+    .af-table tbody tr { transition: background .12s; }
+    .af-table tbody tr:hover { background: rgba(255,255,255,.55); }
+
+    /* ── Student ID badge ────────────────────────────────────────────────────── */
+    .stu-id {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(68,107,149,.1); color: var(--c-midnight);
+      font-size: 11px; font-weight: 700; font-family: ui-monospace, monospace;
+    }
+    .stu-id.unknown { background: rgba(245,158,11,.1); color: #92400e; }
+
+    /* ── File download link ──────────────────────────────────────────────────── */
+    .file-dl-link {
+      color: var(--c-arctic); text-decoration: none; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .file-dl-link:hover { text-decoration: underline; }
+    .file-dl-link svg { width: 12px; height: 12px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Uploaded date ───────────────────────────────────────────────────────── */
+    .af-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+    /* ── Delete row button ───────────────────────────────────────────────────── */
+    .btn-del-row {
+      padding: 6px 15px; border-radius: 999px; border: none;
+      background: rgba(239,68,68,.1); color: #dc2626;
+      font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-del-row:hover { background: rgba(239,68,68,.2); }
+
+    /* ── Preview row button ──────────────────────────────────────────────────── */
+    .btn-preview-row {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 999px; border: none;
+      background: rgba(68,107,149,.1); color: var(--c-arctic);
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .15s; white-space: nowrap;
+    }
+    .btn-preview-row:hover:not([disabled]) { background: rgba(68,107,149,.2); }
+    .btn-preview-row[disabled] { opacity: .38; cursor: not-allowed; }
+    .btn-preview-row svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* ── Actions cell ────────────────────────────────────────────────────────── */
+    .af-actions-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Student identity in table ───────────────────────────────────────────── */
+    .stu-name { font-size: 13px; font-weight: 700; color: var(--text-strong); }
+    .stu-id-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; font-family: ui-monospace, monospace; }
+    .stu-id.pending { background: rgba(208,223,235,.35); color: var(--text-muted); }
+
+    /* ── Extraction failure inline ───────────────────────────────────────────── */
+    .af-fail-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(239,68,68,.1); color: #dc2626;
+      font-size: 11px; font-weight: 700;
+    }
+    .af-fail-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .af-fail-reason {
+      display: block; font-size: 11px; color: #dc2626; margin-top: 4px;
+      max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Retry row button ────────────────────────────────────────────────────── */
+    .btn-retry-row {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 999px; border: none;
+      background: rgba(239,68,68,.1); color: #dc2626;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .15s; white-space: nowrap;
+    }
+    .btn-retry-row:hover { background: rgba(239,68,68,.2); }
+    .btn-retry-row svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* ── Empty state ─────────────────────────────────────────────────────────── */
+    .af-empty {
+      padding: 56px 24px; text-align: center;
+    }
+    .af-empty-ring {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(208,223,235,.3);
+      display: grid; place-items: center; margin: 0 auto 16px;
+    }
+    .af-empty-ring svg { width: 28px; height: 28px; stroke: rgba(40,64,91,.3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .af-empty p { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* ── Section divider ─────────────────────────────────────────────────────── */
+    .section-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(208,223,235,.6), transparent); margin: 20px 0; }
+
+    /* ── Delete confirm modal ────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(10,28,52,.48); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .del-modal-inner {
+      background: #f7fbff; border: 1px solid var(--glass-border); border-radius: 22px;
+      max-width: 400px; width: 100%; padding: 34px 28px; text-align: center;
+      box-shadow: 0 32px 80px rgba(40,64,91,.28);
+      transform: scale(.94) translateY(14px); transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+    }
+    .modal-overlay.open .del-modal-inner { transform: scale(1) translateY(0); }
+    .del-ring {
+      width: 64px; height: 64px; border-radius: 50%; background: rgba(239,68,68,.1);
+      display: grid; place-items: center; margin: 0 auto 18px;
+    }
+    .del-ring svg { width: 28px; height: 28px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .del-modal-inner h3 { margin: 0 0 8px; font-size: 18px; color: var(--text-strong); }
+    .del-modal-inner p  { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+    .del-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-cancel { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-danger { padding: 10px 22px; border-radius: 10px; border: none; background: #ef4444; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; box-shadow: 0 4px 14px rgba(239,68,68,.3); }
+    .btn-danger:hover { opacity: .85; }
+    .btn-spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .65s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Logout modal ────────────────────────────────────────────────────────── */
+    .logout-overlay {
+      position: fixed; inset: 0; background: rgba(0,20,40,.55);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .25s; z-index: 300;
+    }
+    .logout-overlay.active { opacity: 1; visibility: visible; }
+    .logout-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 400px; max-width: 92%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s;
+    }
+    .logout-overlay.active .logout-modal { transform: scale(1); }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions  { display: flex; justify-content: center; gap: 12px; }
+    .btn-primary { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: opacity .18s; box-shadow: 0 4px 14px rgba(68,107,149,.3); }
+    .btn-primary:hover { opacity: .88; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 26px; right: 26px; z-index: 400;
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 20px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; color: #fff;
+      box-shadow: 0 10px 32px rgba(0,0,0,.2);
+      transform: translateY(90px); opacity: 0;
+      transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast.info    { background: linear-gradient(135deg,var(--c-ice),var(--c-arctic)); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+    /* ── No-exam notice ──────────────────────────────────────────────────────── */
+    .no-exam-msg {
+      padding: 12px 16px; border-radius: 10px; margin-top: 12px;
+      background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.22);
+      font-size: 12px; color: #92400e; font-weight: 600; display: none;
+    }
+    .no-exam-msg.show { display: block; }
+
+  </style>
+</head>
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html" class="active">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════════════════════════ -->
+  <main>
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 style="margin:0;font-size:20px;">Answer Files</h2>
+          <div class="bc">Dashboard &rsaquo; Answer Files</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="./profile.html" class="user-chip">
+          <div class="chip-av" id="chipAvatar">?</div>
+          <span id="chipName">Instructor</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Workflow Progress Indicator -->
+    <div class="workflow-progress-wrap glass">
+      <div class="wp-steps-outer">
+        <div class="wp-fill" id="wpFill"></div>
+        <div class="wp-steps-row">
+          <div class="wp-step" id="wps-1">
+            <div class="wp-bubble">1</div>
+            <div class="wp-lbl">Exam Info</div>
+          </div>
+          <div class="wp-step" id="wps-2">
+            <div class="wp-bubble">2</div>
+            <div class="wp-lbl">Rubric &amp; Answer Key</div>
+          </div>
+          <div class="wp-step" id="wps-3">
+            <div class="wp-bubble">3</div>
+            <div class="wp-lbl">Upload Answers</div>
+          </div>
+          <div class="wp-step" id="wps-4">
+            <div class="wp-bubble">4</div>
+            <div class="wp-lbl">AI Grading</div>
+          </div>
+          <div class="wp-step" id="wps-5">
+            <div class="wp-bubble">5</div>
+            <div class="wp-lbl">Review Grades</div>
+          </div>
+        </div>
+      </div>
+      <div class="wp-nav-row">
+        <button class="wp-prev-btn" onclick="window.location.href='./rubrics.html'">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <span class="wp-prev-btn-label">Rubric &amp; Answer Key</span>
+        </button>
+        <div class="wp-next-wrap" style="display:flex;flex-direction:column;align-items:center;">
+          <button class="wp-next-btn" id="progressNextBtn" disabled>
+            <span class="wp-btn-label">Next: AI Grading</span>
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          <span id="nextHint" style="font-size:11px;color:var(--text-muted);margin-top:5px;text-align:center;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="af-page-header">
+      <h1>Answer Files</h1>
+      <p>Upload student answer PDFs for grading</p>
+    </div>
+
+    <!-- ── Card 1: Upload Answers ─────────────────────────────────────────── -->
+    <div class="af-card glass">
+      <div class="af-card-head">
+        <div class="af-card-head-left">
+          <div class="af-card-icon">
+            <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          </div>
+          <span class="af-card-title">Upload Answers</span>
+        </div>
+      </div>
+
+      <div class="af-card-body">
+
+        <!-- Select Exam -->
+        <div>
+          <label class="af-field-label" for="examSelect">Select Exam</label>
+          <div class="af-select-wrap">
+            <select id="examSelect">
+              <option value="">Loading exams…</option>
+            </select>
+            <svg class="af-sel-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="no-exam-msg" id="noExamMsg">No exams found. Please create an exam first in Manage Exams.</div>
+        </div>
+
+        <!-- Dropzone -->
+        <div class="af-dropzone" id="dropzone" tabindex="0" role="button" aria-label="Click or drag files to upload">
+          <input type="file" id="fileInput" accept=".pdf,application/pdf,.zip,application/zip,application/x-zip-compressed" multiple style="display:none;" />
+          <div class="dz-upload-icon">
+            <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          </div>
+          <div class="dz-main-text">Click or drag files here</div>
+          <div class="dz-sub-text">PDF files or a ZIP containing PDFs</div>
+        </div>
+
+        <!-- Messages -->
+        <div class="af-msg error" id="uploadError">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="uploadErrorText"></span>
+        </div>
+        <div class="af-msg warning" id="uploadWarn">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="uploadWarnText"></span>
+        </div>
+        <div class="af-msg info" id="uploadInfo">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span id="uploadInfoText"></span>
+        </div>
+
+        <!-- Progress -->
+        <div class="af-upload-progress" id="uploadProgress">
+          <div class="up-label" id="progressLabel">Uploading…</div>
+          <div class="up-bar-track">
+            <div class="up-bar-fill" id="progressFill"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Card 2: Uploaded Files ─────────────────────────────────────────── -->
+    <div class="af-card glass">
+      <div class="af-card-head">
+        <div class="af-card-head-left">
+          <div class="af-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <span class="af-card-title">Uploaded Files</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="af-card-badges">
+            <span class="files-badge" id="filesBadge">0 files</span>
+            <span class="absent-badge" id="absentBadge" style="display:none;"></span>
+          </div>
+          <button class="btn-af-extract" id="btnExtractAnswers" type="button" style="display:none;">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Extract Answers
+          </button>
+        </div>
+      </div>
+
+      <!-- Extraction status strip -->
+      <div class="af-extract-strip" id="afExtractStrip" style="display:none;"></div>
+
+      <!-- Empty state -->
+      <div class="af-empty" id="filesEmpty">
+        <div class="af-empty-ring">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p>No files uploaded yet. Upload PDFs or a ZIP to see them here.</p>
+      </div>
+
+      <!-- Table -->
+      <div class="af-table-wrap" id="filesTableWrap" style="display:none;">
+        <table class="af-table">
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Student Name</th>
+              <th>File</th>
+              <th>Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="filesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-space"></div>
+  </main>
+</div>
+
+<!-- Sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══ DELETE CONFIRM MODAL ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="del-modal-inner">
+    <div class="del-ring">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+    <h3>Delete File?</h3>
+    <p>Are you sure you want to delete <strong id="deleteFileName"></strong>?<br>This action cannot be undone.</p>
+    <div class="del-actions">
+      <button class="btn-cancel" id="delCancelBtn">Cancel</button>
+      <button class="btn-danger" id="delConfirmBtn">
+        <span id="delBtnText">Delete</span>
+        <span class="btn-spinner" id="delSpinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGOUT MODAL ══════════════════════════════════════════════════════════ -->
+<div class="logout-overlay" id="logoutModal">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign out?</h3>
+    <p>You will be redirected to the login page.</p>
+    <div class="logout-actions">
+      <button class="btn-cancel" id="logoutCancelBtn">Cancel</button>
+      <button class="btn-primary" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg id="toastIcon" viewBox="0 0 24 24"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+authGuard();
+(function () {
+  'use strict';
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     HELPERS
+  ══════════════════════════════════════════════════════════════════════════ */
+  function esc(str) {
+    return String(str).replace(/[&"'<>]/g, c => ({'&':'&amp;','"':'&quot;',"'":'&#39;','<':'&lt;','>':'&gt;'}[c]));
+  }
+
+  function fmtDate(iso) {
+    try {
+      return new Date(iso).toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    } catch { return iso; }
+  }
+
+  /** Infer student ID from filename. */
+  function inferStudentId(filename) {
+    const base = filename.replace(/\.pdf$/i, '');
+    // STU_001, STU001, STU-001 variants
+    const m1 = base.match(/^STU[_\-]?(\d+)$/i);
+    if (m1) return 'STU_' + m1[1].padStart(3, '0');
+    // student_001, student001, student-001 variants
+    const m2 = base.match(/^student[_\-]?(\d+)$/i);
+    if (m2) return 'STU_' + m2[1].padStart(3, '0');
+    return 'UNKNOWN';
+  }
+
+  /**
+   * Heuristic: scan first 20 KB of the PDF for /Font declarations.
+   * Text-based PDFs embed font resources; image-only scans typically lack them.
+   * Returns true if the PDF may be image-based.
+   */
+  function checkImageBased(file) {
+    return new Promise(resolve => {
+      const slice = file.slice(0, 20480);
+      const reader = new FileReader();
+      reader.onload  = (e) => resolve(!/\/Font[\s\n\r<>\/\[]/m.test(e.target.result || ''));
+      reader.onerror = ()  => resolve(false);
+      reader.readAsText(slice, 'latin1');
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DOM REFS
+  ══════════════════════════════════════════════════════════════════════════ */
+  const examSelect      = document.getElementById('examSelect');
+  const noExamMsg       = document.getElementById('noExamMsg');
+  const dropzone        = document.getElementById('dropzone');
+  const fileInput       = document.getElementById('fileInput');
+  const uploadError     = document.getElementById('uploadError');
+  const uploadErrorText = document.getElementById('uploadErrorText');
+  const uploadWarn      = document.getElementById('uploadWarn');
+  const uploadWarnText  = document.getElementById('uploadWarnText');
+  const uploadInfo      = document.getElementById('uploadInfo');
+  const uploadInfoText  = document.getElementById('uploadInfoText');
+  const uploadProgress  = document.getElementById('uploadProgress');
+  const progressLabel   = document.getElementById('progressLabel');
+  const progressFill    = document.getElementById('progressFill');
+  const filesBadge      = document.getElementById('filesBadge');
+  const filesEmpty      = document.getElementById('filesEmpty');
+  const filesTableWrap  = document.getElementById('filesTableWrap');
+  const filesTableBody  = document.getElementById('filesTableBody');
+  const deleteModal     = document.getElementById('deleteModal');
+  const deleteFileName  = document.getElementById('deleteFileName');
+  const delConfirmBtn   = document.getElementById('delConfirmBtn');
+  const delCancelBtn    = document.getElementById('delCancelBtn');
+  const delBtnText      = document.getElementById('delBtnText');
+  const delSpinner      = document.getElementById('delSpinner');
+
+  let pendingDeleteId = null;
+  let uploading       = false;
+  let currentFiles     = [];
+  // answerFileId → StudentExtractionRead; updated by _initSaViewer after each load
+  let _extractionMap   = {};
+  // Set<number> of answer-file IDs in the currently-running extraction batch.
+  // null when no batch is running.  Used by renderTable to show "Extracting…" labels.
+  let _activeBatchIds  = null;
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     MESSAGES
+  ══════════════════════════════════════════════════════════════════════════ */
+  function showError(msg)   { uploadErrorText.textContent = msg; uploadError.classList.add('show'); }
+  function clearError()     { uploadError.classList.remove('show'); }
+  function showWarn(msg)    { uploadWarnText.textContent = msg; uploadWarn.classList.add('show'); }
+  function clearWarn()      { uploadWarn.classList.remove('show'); }
+  function showInfo(msg)    { uploadInfoText.textContent = msg; uploadInfo.classList.add('show'); }
+  function clearInfo()      { uploadInfo.classList.remove('show'); }
+  function clearAllMsgs()   { clearError(); clearWarn(); clearInfo(); }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     TOAST
+  ══════════════════════════════════════════════════════════════════════════ */
+  const toast    = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  const toastIcon= document.getElementById('toastIcon');
+  let toastTimer;
+
+  const ICONS = {
+    success: '<polyline points="20 6 9 17 4 12"/>',
+    error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  };
+
+  function showToast(msg, type='info') {
+    clearTimeout(toastTimer);
+    toastMsg.textContent = msg;
+    toastIcon.innerHTML  = ICONS[type] || ICONS.info;
+    toast.className      = 'toast show ' + type;
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3800);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     USER CHIP
+  ══════════════════════════════════════════════════════════════════════════ */
+  (function() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    if (!p) return;
+    const _name   = getDisplayName(p) || p.email || 'User';
+    const _inits  = _name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
+    const _avUrl  = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+    const av = document.getElementById('chipAvatar');
+    const nm = document.getElementById('chipName');
+    if (nm) nm.textContent = _name;
+    if (av) {
+      if (_avUrl) {
+        av.innerHTML = `<img src="${_avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      } else {
+        av.textContent = _inits;
+      }
+    }
+  })();
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     WORKFLOW PROGRESS (per-exam)
+  ══════════════════════════════════════════════════════════════════════════ */
+  let allExams = [];
+
+  const WORKFLOW_STEPS = [
+    { num:1, href:'./manage-exams.html'    },
+    { num:2, href:'./rubrics.html'         },
+    { num:3, href:'./answer-files.html'    },
+    { num:4, href:'./auto-grading.html'    },
+    { num:5, href:'./results-reviews.html' },
+  ];
+  const THIS_STEP = 3;
+  const CHECK_SVG = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  // Derive workflow display state from backend exam.workflowStep.
+  // Frontend: 1=exam, 2=rubrics+answers, 3=answer-files, 4=auto-grading, 5=results
+  // Backend:  1=created, 2=rubric, 3=model-answers, 4=answer-files, 5=grading
+  function wfFromExam(examId) {
+    const exam = examId ? allExams.find(e => String(e.id) === String(examId)) : null;
+    if (!exam) return { currentStep: THIS_STEP, completedSteps: [] };
+    const ws = exam.workflowStep;
+    const completed = [];
+    if (ws >= 1) completed.push(1);  // exam exists → step 1 done
+    if (ws >= 3) completed.push(2);  // rubric + answers done → step 2 done
+    if (ws >= 4) completed.push(3);  // answer files done → step 3 done
+    if (ws >= 5) completed.push(4);  // grading done → step 4 done
+    return { currentStep: THIS_STEP, completedSteps: completed.filter(s => s !== THIS_STEP) };
+  }
+
+  function renderWorkflow(wf) {
+    const completedSteps = (wf && wf.completedSteps) ? wf.completedSteps : [];
+    const currentStep    = (wf && wf.currentStep)    ? wf.currentStep    : THIS_STEP;
+    let completedCount = 0;
+
+    WORKFLOW_STEPS.forEach(s => {
+      const el = document.getElementById('wps-' + s.num);
+      if (!el) return;
+      el.classList.remove('completed', 'active', 'upcoming');
+      el.onclick = null;
+      let state;
+      if (completedSteps.includes(s.num))  { state = 'completed'; completedCount++; }
+      else if (s.num === currentStep)      { state = 'active'; }
+      else                                 { state = 'upcoming'; }
+
+      el.classList.add(state);
+      el.querySelector('.wp-bubble').innerHTML = state === 'completed' ? CHECK_SVG : s.num;
+      if (state === 'completed') el.onclick = () => { window.location.href = s.href; };
+      el.title = state === 'upcoming' ? 'Complete earlier steps first' : '';
+    });
+
+    const fill = document.getElementById('wpFill');
+    if (fill) requestAnimationFrame(() => { fill.style.width = (Math.min(completedCount, WORKFLOW_STEPS.length - 1) / WORKFLOW_STEPS.length * 100) + '%'; });
+  }
+
+  function updateNextBtn() {
+    const btn    = document.getElementById('progressNextBtn');
+    const hintEl = document.getElementById('nextHint');
+    const examId = examSelect.value;
+    const hasFiles = examId && currentFiles.length > 0;
+
+    let hint;
+    if (!examId) {
+      hint = 'Select an exam to continue';
+    } else if (!hasFiles) {
+      hint = 'Upload at least one answer file to continue';
+    } else {
+      hint = '';
+    }
+
+    btn.disabled = !!hint;
+    btn.title    = hint || 'Proceed to AI Grading';
+    if (hintEl) { hintEl.textContent = hint; hintEl.style.display = hint ? '' : 'none'; }
+  }
+
+  const nextBtn = document.getElementById('progressNextBtn');
+  nextBtn.addEventListener('click', () => {
+    const examId = examSelect.value;
+    if (!examId) { return; }
+    const next = WORKFLOW_STEPS.find(s => s.num === THIS_STEP + 1);
+    if (next) window.location.href = next.href + '?examId=' + examId;
+  });
+
+  renderWorkflow(null);
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     SIDEBAR TOGGLE (mobile)
+  ══════════════════════════════════════════════════════════════════════════ */
+  const sidebar        = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('mobile-open');
+    sidebarOverlay.classList.toggle('open');
+  });
+  sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    sidebarOverlay.classList.remove('open');
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOGOUT
+  ══════════════════════════════════════════════════════════════════════════ */
+  const logoutModal   = document.getElementById('logoutModal');
+  const logoutCancel  = document.getElementById('logoutCancelBtn');
+  document.getElementById('logoutTrigger').addEventListener('click', e => { e.preventDefault(); logoutModal.classList.add('active'); });
+  logoutCancel.addEventListener('click', () => logoutModal.classList.remove('active'));
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOAD EXAMS
+  ══════════════════════════════════════════════════════════════════════════ */
+  async function loadExams() {
+    examSelect.innerHTML = '<option value="">Loading exams…</option>';
+    examSelect.disabled  = true;
+    try {
+      allExams = await apiFetch('/exams/');
+    } catch (err) {
+      examSelect.innerHTML = '<option value="">Failed to load exams</option>';
+      showToast('Could not load exams: ' + err.message, 'error');
+      renderTable([]);
+      return;
+    }
+    examSelect.innerHTML = '';
+    if (!allExams.length) {
+      examSelect.innerHTML = '<option value="">No exams found</option>';
+      examSelect.disabled  = true;
+      noExamMsg.classList.add('show');
+      renderTable([]);
+      return;
+    }
+    noExamMsg.classList.remove('show');
+    examSelect.disabled = false;
+    allExams.forEach(ex => {
+      const opt = document.createElement('option');
+      opt.value       = ex.id;
+      opt.textContent = ex.name + (ex.section ? ' — ' + ex.section : '');
+      examSelect.appendChild(opt);
+    });
+    // Auto-select from URL param or localStorage
+    const _urlId   = new URLSearchParams(window.location.search).get('examId');
+    const _savedId = String(_urlId || localStorage.getItem('currentExamId') || '');
+    if (_savedId) {
+      const _match = Array.from(examSelect.options).find(o => String(o.value) === _savedId);
+      if (_match) examSelect.value = _match.value;
+    }
+    await loadFiles(examSelect.value);
+    renderWorkflow(wfFromExam(examSelect.value));
+    window._afLoadExtractions?.(examSelect.value);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOAD FILES FOR SELECTED EXAM
+  ══════════════════════════════════════════════════════════════════════════ */
+  async function loadFiles(examId) {
+    if (!examId) { currentFiles = []; renderTable([]); return; }
+    try {
+      const files = await apiFetch('/answer-files/?exam_id=' + examId);
+      currentFiles = files;
+      renderTable(files);
+
+      // Proactive prerequisite hint: show an info message if the selected exam
+      // has neither a rubric nor an answer key yet (workflowStep < 2).
+      const exam = allExams.find(e => String(e.id) === String(examId));
+      if (exam && (exam.workflowStep || 0) < 2) {
+        showInfo(
+          'Upload blocked: this exam must have at least a rubric or an answer key ' +
+          'before answer files can be uploaded.'
+        );
+      } else {
+        clearInfo();
+      }
+    } catch (err) {
+      currentFiles = [];
+      renderTable([]);
+      showToast('Could not load files: ' + err.message, 'error');
+    }
+  }
+
+  examSelect.addEventListener('change', async () => {
+    clearAllMsgs();
+    // Clear stale extraction state before loading files for the new exam
+    // so table rows immediately show "Awaiting extraction" for the new exam.
+    _extractionMap = {};
+    await loadFiles(examSelect.value);
+    const examId = examSelect.value;
+    if (examId) localStorage.setItem('currentExamId', examId);
+    renderWorkflow(wfFromExam(examId));
+    window._afLoadExtractions?.(examId);
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     RENDER TABLE
+  ══════════════════════════════════════════════════════════════════════════ */
+  function renderTable(files) {
+    const count = files.length;
+    filesBadge.textContent = count + (count === 1 ? ' file' : ' files');
+
+    // Absent badge: compare uploaded count against exam's expected student count
+    const absentBadge = document.getElementById('absentBadge');
+    if (absentBadge) {
+      const examId  = parseInt(examSelect.value, 10) || null;
+      const exam    = examId ? allExams.find(e => e.id === examId) : null;
+      const expected = exam?.students ?? null;
+      if (expected !== null && expected > 0) {
+        const absent = Math.max(0, expected - count);
+        absentBadge.textContent = absent + ' absent';
+        absentBadge.style.display = absent > 0 ? '' : 'none';
+      } else {
+        absentBadge.style.display = 'none';
+      }
+    }
+
+    updateNextBtn();
+
+    if (count === 0) {
+      filesEmpty.style.display    = '';
+      filesTableWrap.style.display = 'none';
+      return;
+    }
+
+    filesEmpty.style.display    = 'none';
+    filesTableWrap.style.display = '';
+    filesTableBody.innerHTML     = '';
+
+    // Stable sort by id ascending so the order never changes between renders
+    const sorted = [...files].sort((a, b) => a.id - b.id);
+
+    const _xSvg  = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+    const _rSvg  = `<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.09"/></svg>`;
+    const _spinHtml = `<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(68,107,149,.25);border-top-color:var(--c-arctic);border-radius:50%;animation:af-spin .8s linear infinite;vertical-align:middle;"></span>`;
+
+    sorted.forEach(f => {
+      const tr = document.createElement('tr');
+      tr.dataset.id     = f.id;
+      tr.dataset.fileId = f.id;
+
+      // Student identity — use extraction data if available, else status-driven placeholders
+      const ex            = _extractionMap[f.id] || null;
+      const uid           = ex?.studentIdNum || null;
+      const name          = ex?.studentName  || null;
+      const inBatch       = _activeBatchIds !== null && _activeBatchIds.has(f.id);
+      // "extracting" = in the active batch and not yet confirmed extracted or failed THIS run
+      const extracting    = inBatch && !ex && f.extractionStatus !== 'extracted' && f.extractionStatus !== 'failed';
+      // "justExtracted" = extracted in this batch but extraction map not yet refreshed
+      const justExtracted = inBatch && !ex && f.extractionStatus === 'extracted';
+      // "failed" = failed and not in a running batch (batch shows "Extracting…" while retrying)
+      const failed        = !inBatch && !ex && f.extractionStatus === 'failed';
+
+      const stuIdCell = ex
+        ? (uid  ? `<span class="stu-id">${esc(uid)}</span>`
+                : `<span class="stu-id" style="opacity:.45;">—</span>`)
+        : failed
+          ? `<span class="af-fail-badge">${_xSvg}Failed</span>`
+          : extracting
+            ? _spinHtml
+            : `<span class="stu-id pending">—</span>`;
+
+      let stuNameCell;
+      if (ex) {
+        stuNameCell = name
+          ? `<div class="stu-name">${esc(name)}</div>`
+          : `<span style="font-size:13px;color:var(--text-muted);">—</span>`;
+      } else if (failed) {
+        const reason = f.extractionError ? esc(f.extractionError) : 'Extraction failed';
+        stuNameCell = `<span class="af-fail-reason" title="${reason}">${reason}</span>`;
+      } else if (extracting) {
+        stuNameCell = `<span style="font-size:12px;font-weight:600;color:var(--c-arctic);">Extracting\u2026</span>`;
+      } else if (justExtracted) {
+        stuNameCell = `<span style="font-size:12px;font-weight:600;color:#059669;">Extracted</span>`;
+      } else {
+        stuNameCell = `<span class="stu-id pending">Awaiting extraction</span>`;
+      }
+
+      const examId = examSelect.value;
+      const previewDisabled = ex ? '' : 'disabled';
+      const previewExId    = ex ? esc(String(ex.id)) : '';
+
+      // Build action buttons
+      const previewBtn = `
+        <button class="btn-preview-row"
+          data-exam-id="${esc(String(examId))}"
+          data-extraction-id="${previewExId}"
+          ${previewDisabled}
+          title="${ex ? 'Preview extracted answers for this student' : 'Extract answers first to enable preview'}">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview
+        </button>`;
+      // Show retry only when failed AND no active batch is running (batch handles retry itself)
+      const retryBtn = (failed && !inBatch)
+        ? `<button class="btn-retry-row" data-file-id="${esc(String(f.id))}" title="Retry extraction for this file">${_rSvg}Retry</button>`
+        : '';
+      const delBtn = `<button class="btn-del-row" data-id="${esc(String(f.id))}" data-name="${esc(f.fileName)}">Delete</button>`;
+
+      tr.innerHTML = `
+        <td>${stuIdCell}</td>
+        <td>${stuNameCell}</td>
+        <td>
+          <span class="file-dl-link">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            ${esc(f.fileName)}
+          </span>
+        </td>
+        <td><span class="af-date">${fmtDate(f.uploadedAt)}</span></td>
+        <td class="af-actions-cell">
+          ${previewBtn}
+          ${retryBtn}
+          ${delBtn}
+        </td>
+      `;
+      filesTableBody.appendChild(tr);
+    });
+
+    // Attach delete handlers
+    filesTableBody.querySelectorAll('.btn-del-row').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.name));
+    });
+
+    // Attach preview handlers — enabled only when extraction exists
+    filesTableBody.querySelectorAll('.btn-preview-row:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const eId  = btn.dataset.examId;
+        const exId = btn.dataset.extractionId;
+        if (eId && exId) {
+          window.open(
+            `./student-answer-preview.html?examId=${encodeURIComponent(eId)}&extractionId=${encodeURIComponent(exId)}`,
+            '_blank'
+          );
+        }
+      });
+    });
+
+    // Attach retry handlers — re-trigger extraction for failed files.
+    // The backend POST picks up files not yet extracted (including failed ones).
+    filesTableBody.querySelectorAll('.btn-retry-row').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const extractBtn = document.getElementById('btnExtractAnswers');
+        if (extractBtn && !extractBtn.disabled) extractBtn.click();
+      });
+    });
+
+    // Sync Extract Answers button visibility after table is rendered
+    window._afSyncExtractBtn?.();
+  }
+
+  // Called by _initExtractionState whenever extractions load — updates the map then
+  // re-renders the table so student names and Preview buttons reflect reality.
+  // Saves and restores scroll position so the page does not jump to the top.
+  window._afSetExtractionMap = function (map) {
+    _extractionMap = map || {};
+    if (currentFiles.length) {
+      const main = document.querySelector('main');
+      const savedY = main ? main.scrollTop : window.scrollY;
+      renderTable(currentFiles);
+      if (main) { main.scrollTop = savedY; }
+      else       { window.scrollTo(0, savedY); }
+    }
+  };
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DROPZONE  (drag, click, keyboard)
+  ══════════════════════════════════════════════════════════════════════════ */
+  function setDropzoneDisabled(disabled) {
+    if (disabled) { dropzone.classList.add('dz-disabled'); }
+    else          { dropzone.classList.remove('dz-disabled'); }
+  }
+
+  dropzone.addEventListener('click',   () => { if (!uploading) fileInput.click(); });
+  dropzone.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !uploading) fileInput.click(); });
+
+  dropzone.addEventListener('dragover',  e => { e.preventDefault(); if (!uploading) dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', ()  => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (uploading) return;
+    handleFileSelection(Array.from(e.dataTransfer.files));
+  });
+
+  fileInput.addEventListener('change', e => {
+    handleFileSelection(Array.from(e.target.files));
+    fileInput.value = '';
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     FILE SELECTION HANDLER
+  ══════════════════════════════════════════════════════════════════════════ */
+  async function handleFileSelection(files) {
+    clearAllMsgs();
+
+    if (!examSelect.value) {
+      showError('Please select an exam before uploading.');
+      return;
+    }
+    if (!files.length) return;
+
+    // Separate ZIPs and PDFs
+    const zips = files.filter(f => f.name.toLowerCase().endsWith('.zip') || f.type.includes('zip'));
+    const pdfs = files.filter(f => f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf');
+    const other= files.filter(f => !zips.includes(f) && !pdfs.includes(f));
+
+    if (other.length && !pdfs.length && !zips.length) {
+      showError('Unsupported file type. Please upload PDF files or a single ZIP file.');
+      return;
+    }
+    if (other.length) {
+      showWarn('Some files were skipped — only PDF and ZIP files are accepted.');
+    }
+
+    if (zips.length > 1) {
+      showError('Please upload only one ZIP file at a time.');
+      return;
+    }
+
+    if (zips.length === 1 && pdfs.length > 0) {
+      showError('Please upload either PDF files or a single ZIP — not both at once.');
+      return;
+    }
+
+    if (zips.length === 1) {
+      await handleZipUpload(examSelect.value, zips[0]);
+    } else {
+      await handlePdfUpload(examSelect.value, pdfs);
+    }
+  }
+
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     PDF UPLOAD FLOW
+  ══════════════════════════════════════════════════════════════════════════ */
+  async function handlePdfUpload(examId, pdfFiles) {
+    uploading = true;
+    setDropzoneDisabled(true);
+    uploadProgress.classList.add('show');
+
+    const warnings = [];
+    const uploaded  = [];
+
+    for (let i = 0; i < pdfFiles.length; i++) {
+      const file = pdfFiles[i];
+      const pct  = Math.round(((i) / pdfFiles.length) * 100);
+      setProgress(pct, `Uploading ${i + 1} of ${pdfFiles.length}: ${file.name}`);
+
+      // Image-based check
+      const mightBeImage = await checkImageBased(file);
+      if (mightBeImage) {
+        warnings.push(`"${file.name}" may be image-based; text extraction could fail.`);
+      }
+
+      try {
+        const fd = new FormData();
+        fd.append('exam_id', examId);
+        fd.append('files', file);
+        const records = await apiFetch('/answer-files/', { method: 'POST', body: fd });
+        uploaded.push(...(Array.isArray(records) ? records : [records]));
+      } catch (err) {
+        uploading = false;
+        setDropzoneDisabled(false);
+        uploadProgress.classList.remove('show');
+        showError('Upload failed: ' + (err && err.message ? err.message : 'Unknown error'));
+        return;
+      }
+    }
+
+    setProgress(100, 'Upload complete!');
+    setTimeout(() => { uploadProgress.classList.remove('show'); setProgress(0, ''); }, 1200);
+
+    uploading = false;
+    setDropzoneDisabled(false);
+
+    if (warnings.length) {
+      showWarn(warnings.join(' | '));
+    }
+
+    showToast(uploaded.length + (uploaded.length === 1 ? ' file' : ' files') + ' uploaded successfully.', 'success');
+    await loadFiles(examId);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ZIP UPLOAD FLOW  (backend handles extraction)
+  ══════════════════════════════════════════════════════════════════════════ */
+  async function handleZipUpload(examId, zipFile) {
+    uploading = true;
+    setDropzoneDisabled(true);
+    uploadProgress.classList.add('show');
+    setProgress(10, 'Uploading ZIP…');
+
+    try {
+      const fd = new FormData();
+      fd.append('exam_id', examId);
+      fd.append('files', zipFile);
+      const records = await apiFetch('/answer-files/', { method: 'POST', body: fd });
+      const count = Array.isArray(records) ? records.length : 1;
+
+      setProgress(100, 'Upload complete!');
+      setTimeout(() => { uploadProgress.classList.remove('show'); setProgress(0, ''); }, 1200);
+
+      uploading = false;
+      setDropzoneDisabled(false);
+
+      showToast(count + (count === 1 ? ' file' : ' files') + ' extracted from ZIP and uploaded.', 'success');
+      await loadFiles(examId);
+    } catch (err) {
+      uploading = false;
+      setDropzoneDisabled(false);
+      uploadProgress.classList.remove('show');
+      showError('Upload failed: ' + (err && err.message ? err.message : 'Unknown error'));
+    }
+  }
+
+  function setProgress(pct, label) {
+    progressFill.style.width   = pct + '%';
+    progressLabel.textContent  = label;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DELETE FLOW
+  ══════════════════════════════════════════════════════════════════════════ */
+  function openDeleteModal(fileId, fileName) {
+    pendingDeleteId            = fileId;
+    deleteFileName.textContent = fileName;
+    deleteModal.classList.add('open');
+  }
+
+  async function _doDelete(fileId) {
+    try {
+      await apiFetch('/answer-files/' + fileId, { method: 'DELETE' });
+      showToast('File deleted.', 'success');
+      await loadFiles(examSelect.value);
+    } catch (err) {
+      showToast('Delete failed: ' + (err.message || 'Try again.'), 'error');
+    }
+  }
+
+  delCancelBtn.addEventListener('click', () => {
+    deleteModal.classList.remove('open');
+    pendingDeleteId = null;
+  });
+  deleteModal.addEventListener('click', e => {
+    if (e.target === deleteModal) { deleteModal.classList.remove('open'); pendingDeleteId = null; }
+  });
+
+  delConfirmBtn.addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    delBtnText.textContent      = 'Deleting…';
+    delSpinner.style.display    = 'inline-block';
+    delConfirmBtn.disabled      = true;
+
+    try {
+      await _doDelete(pendingDeleteId);
+    } finally {
+      delBtnText.textContent   = 'Delete';
+      delSpinner.style.display = 'none';
+      delConfirmBtn.disabled   = false;
+      deleteModal.classList.remove('open');
+      pendingDeleteId = null;
+    }
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     EXTRACT ANSWERS — trigger + status polling
+  ══════════════════════════════════════════════════════════════════════════ */
+  (function _initExtractAnswers() {
+    const btn   = document.getElementById('btnExtractAnswers');
+    const strip = document.getElementById('afExtractStrip');
+
+    if (!btn || !strip) return;
+
+    function _showStrip(cls, svgOrSpinner, msg) {
+      strip.className = 'af-extract-strip' + (cls ? ' ' + cls : '');
+      if (svgOrSpinner === 'spinner') {
+        strip.innerHTML = '<div class="af-strip-spinner"></div><span>' + msg + '</span>';
+      } else {
+        strip.innerHTML = svgOrSpinner + '<span>' + msg + '</span>';
+      }
+      strip.style.display = 'flex';
+    }
+
+    const _iconOk  = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+    const _iconErr = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
+    // Show or hide the Extract button whenever the file list changes.
+    function syncExtractBtn() {
+      const examId = parseInt(examSelect.value, 10) || null;
+      const count  = currentFiles.length;
+      if (examId && count > 0) {
+        btn.style.display = '';
+      } else {
+        btn.style.display = 'none';
+        strip.style.display = 'none';
+      }
+    }
+    window._afSyncExtractBtn = syncExtractBtn;
+
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const examId = parseInt(examSelect.value, 10) || null;
+      console.log('[extract] button clicked examId=', examId, 'files=', currentFiles.length);
+
+      if (!examId) { showToast('Select an exam first.', 'info'); return; }
+      if (currentFiles.length === 0) { showToast('No files to extract.', 'info'); return; }
+
+      btn.disabled = true;
+      window._afSaEnterExtracting?.(examId);
+      _showStrip('', 'spinner', 'Checking extraction status\u2026');
+
+      // Identify which files are pending BEFORE the POST so we can track them.
+      // A file is pending when: no extraction map entry AND not yet extracted.
+      // This includes previously-failed files (they are re-queued by the backend).
+      const pendingBeforeIds = new Set(
+        currentFiles
+          .filter(f => !_extractionMap[f.id] && f.extractionStatus !== 'extracted')
+          .map(f => f.id)
+      );
+
+      // POST to start batch extraction
+      let res;
+      try {
+        console.log('[extract] POST /extraction/students/' + examId);
+        res = await apiFetch(`/extraction/students/${examId}`, { method: 'POST' });
+        console.log('[extract] POST response:', res);
+      } catch (err) {
+        _showStrip('strip-error', _iconErr, err.message || 'Extraction failed.');
+        btn.disabled = false;
+        window._afSaExitExtracting?.();
+        _activeBatchIds = null;
+        return;
+      }
+
+      // All files already extracted
+      if (res.filesQueued === 0) {
+        _showStrip('strip-success', _iconOk,
+          'All uploaded answer files have already been extracted.');
+        btn.disabled = false;
+        window._afSaExitExtracting?.();
+        _activeBatchIds = null;
+        return;
+      }
+
+      const totalQueued = res.filesQueued;
+
+      // Mark batch as active — renderTable uses this to show "Extracting…" per row
+      _activeBatchIds = pendingBeforeIds;
+      _showStrip('', 'spinner', `Extracting answers 0 of ${totalQueued}\u2026`);
+
+      // Re-render immediately so rows show "Extracting…"
+      renderTable(currentFiles);
+
+      // ── Poll GET /answer-files/?exam_id={examId} for per-file completion ───
+      // Using AnswerFile.extractionStatus ('extracted'|'failed'|null) is reliable
+      // because the backend sets it per-file as each one finishes, regardless of
+      // whether the student already had a StudentExtraction row (which would cause
+      // the old student-count approach to stop early).
+      let attempts  = 0;
+      const maxAttempts = 120;  // 10 min at 5-s intervals
+      let _pollDone = false;
+
+      const pollId = setInterval(async () => {
+        if (_pollDone) return;
+        attempts++;
+        try {
+          const freshFiles = await apiFetch(`/answer-files/?exam_id=${examId}`);
+
+          // Count files from our pending set that are now done (extracted OR failed)
+          let doneCount = 0;
+          for (const f of freshFiles) {
+            if (pendingBeforeIds.has(f.id) &&
+                (f.extractionStatus === 'extracted' || f.extractionStatus === 'failed')) {
+              doneCount++;
+            }
+          }
+
+          _showStrip('', 'spinner',
+            `Extracting answers ${doneCount} of ${totalQueued}\u2026`);
+
+          // Update table with live per-row status; preserve scroll position
+          currentFiles = freshFiles;
+          const _main = document.querySelector('main');
+          const _savedY = _main ? _main.scrollTop : 0;
+          renderTable(freshFiles);
+          if (_main) _main.scrollTop = _savedY;
+
+          if (doneCount >= totalQueued) {
+            // Every queued file has either been extracted or failed
+            _pollDone = true;
+            clearInterval(pollId);
+            _activeBatchIds = null;
+
+            const failedCount = freshFiles.filter(
+              f => pendingBeforeIds.has(f.id) && f.extractionStatus === 'failed'
+            ).length;
+            const successCount = totalQueued - failedCount;
+
+            let finalMsg;
+            if (failedCount > 0 && successCount > 0) {
+              finalMsg = `Extraction complete — ${successCount} extracted, ${failedCount} failed.`;
+            } else if (failedCount > 0) {
+              finalMsg = `Extraction failed — all ${failedCount} file${failedCount !== 1 ? 's' : ''} failed.`;
+            } else {
+              finalMsg = `Extraction complete — ${successCount} file${successCount !== 1 ? 's' : ''} extracted.`;
+            }
+
+            _showStrip(failedCount === totalQueued ? 'strip-error' : 'strip-success',
+                       failedCount === totalQueued ? _iconErr    : _iconOk,
+                       finalMsg);
+
+            btn.disabled = false;
+            window._afSaExitExtracting?.();
+            // Refresh extraction map so student names and Preview buttons appear
+            window._afLoadExtractions?.(examId);
+            return;
+          }
+        } catch (_) { /* network hiccup — keep polling */ }
+
+        if (!_pollDone && attempts >= maxAttempts) {
+          _pollDone = true;
+          clearInterval(pollId);
+          _activeBatchIds = null;
+
+          // Final status report after timeout
+          try {
+            const finalFiles = await apiFetch(`/answer-files/?exam_id=${examId}`);
+            currentFiles = finalFiles;
+            const doneFinal = finalFiles.filter(
+              f => pendingBeforeIds.has(f.id) &&
+                   (f.extractionStatus === 'extracted' || f.extractionStatus === 'failed')
+            ).length;
+            if (doneFinal > 0) {
+              _showStrip('strip-success', _iconOk,
+                `Extraction complete — ${doneFinal} of ${totalQueued} file${totalQueued !== 1 ? 's' : ''} processed (some may have timed out).`);
+              window._afSaExitExtracting?.();
+              window._afLoadExtractions?.(examId);
+            } else {
+              _showStrip('strip-error', _iconErr,
+                'Extraction is taking longer than expected. Check server logs.');
+              window._afSaExitExtracting?.();
+            }
+            renderTable(finalFiles);
+          } catch (_) {
+            _showStrip('strip-error', _iconErr,
+              'Extraction is taking longer than expected. Check server logs.');
+            window._afSaExitExtracting?.();
+          }
+          btn.disabled = false;
+        }
+      }, 5000);
+    });
+  })();
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     EXTRACTION STATE
+     Maintains the _saActive guard and builds the per-file extraction map
+     that powers student name display and Preview button enable/disable.
+     The embedded viewer card has been removed; extracted answers are shown
+     in the dedicated student-answer-preview.html page opened by Preview.
+  ══════════════════════════════════════════════════════════════════════════ */
+  (function _initExtractionState() {
+    let _extractions   = [];
+    let _currentExamId = null;
+
+    // ── Extraction-active guard ────────────────────────────────────────────
+    // True while POST /extraction/students/{examId} is running and the poll
+    // has not yet received results.  While true, _loadExtractions() returns
+    // early so a concurrent exam-change call cannot reset the map mid-extraction.
+    let _saActive = false;
+
+    // Called by the Extract Answers click handler the moment extraction starts.
+    window._afSaEnterExtracting = function (examId) {
+      _saActive      = true;
+      _currentExamId = examId;
+    };
+
+    // Called when the poll ends (success, timeout, or POST error).
+    // Must be called BEFORE window._afLoadExtractions on success so the guard
+    // is clear when _loadExtractions runs and builds the updated map.
+    window._afSaExitExtracting = function () {
+      _saActive = false;
+    };
+
+    // ── Load extraction list for an exam and update the table ─────────────
+    // Called on exam change, on page load (via loadExams), and on successful
+    // extraction poll completion.  Builds answerFileId → extraction map and
+    // pushes it to the outer scope via window._afSetExtractionMap so that
+    // renderTable() can show extracted student names and enable Preview buttons.
+    async function _loadExtractions(examId) {
+      if (_saActive) return;
+
+      _currentExamId = examId;
+      if (!examId) {
+        window._afSetExtractionMap?.({});
+        return;
+      }
+
+      let fetchOk = true;
+      try { _extractions = await apiFetch(`/extraction/students/${examId}`); }
+      catch (_) { fetchOk = false; }   // keep existing map on network error
+
+      if (!fetchOk) return;  // don't clear map on transient network failure
+
+      if (!_extractions.length) {
+        window._afSetExtractionMap?.({});
+        return;
+      }
+
+      const _newMap = {};
+      _extractions.forEach(ex => { if (ex.answerFileId != null) _newMap[ex.answerFileId] = ex; });
+      window._afSetExtractionMap?.(_newMap);
+    }
+
+    // Expose hook so exam-change handler and extraction poll can trigger a reload
+    window._afLoadExtractions = _loadExtractions;
+  })();
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     INIT
+  ══════════════════════════════════════════════════════════════════════════ */
+  loadExams();
+
+})();
+</script>
+
+</body>
+</html>

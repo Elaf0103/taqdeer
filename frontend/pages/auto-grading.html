@@ -1,0 +1,2845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Auto-Grading</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    body { overflow-x: hidden; }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────────── */
+    .nav a svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+    .sidebar .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+    .sidebar .nav-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+    @media (max-width: 980px) {
+      .sidebar-toggle { display: grid !important; }
+      .sidebar { position: fixed !important; left: -280px; z-index: 150; transition: left 0.3s; height: 100vh; }
+      .sidebar.mobile-open { left: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 149; }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────────── */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; margin-bottom: 24px; border-radius: var(--radius-lg); }
+    .sidebar-toggle { display: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.22); place-items: center; cursor: pointer; }
+    .sidebar-toggle svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .user-chip { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 999px; background: rgba(255,255,255,0.28); border: 1px solid var(--glass-border); font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer; transition: background var(--t); text-decoration: none; }
+    .user-chip:hover { background: rgba(255,255,255,0.45); }
+    .chip-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800; }
+
+    /* ── Workflow Progress ───────────────────────────────────────────────────── */
+    .workflow-progress-wrap { margin-bottom: 24px; padding: 24px 28px 20px; border-radius: var(--radius-lg); display: flex; flex-direction: row; align-items: center; gap: 16px; }
+    .wp-steps-outer { flex: 1; order: 2; position: relative; min-width: 0; }
+    .wp-nav-row { display: contents; }
+    .wp-next-wrap { order: 3; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+    .wp-steps-outer::before { content: ''; position: absolute; top: 26px; left: calc(100% / 10); right: calc(100% / 10); height: 2px; background: rgba(208,223,235,.5); border-radius: 2px; z-index: 0; }
+    .wp-fill { position: absolute; top: 26px; left: calc(100% / 10); height: 2px; width: 0; max-width: calc(100% - 2 * (100% / 10)); background: linear-gradient(90deg, var(--c-ice), var(--c-arctic)); border-radius: 2px; z-index: 1; transition: width .55s cubic-bezier(.4,0,.2,1); }
+    .wp-steps-row { display: flex; position: relative; z-index: 2; }
+    .wp-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
+    .wp-step.upcoming { opacity: .38; cursor: not-allowed; }
+    .wp-step.completed { cursor: pointer; }
+    .wp-step.completed:hover .wp-bubble { transform: scale(1.1); }
+    .wp-step.active { cursor: default; }
+    .wp-bubble { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 800; border: 2.5px solid; transition: all .32s cubic-bezier(.34,1.56,.64,1); position: relative; z-index: 3; }
+    .wp-step.completed .wp-bubble { background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); border-color: var(--c-arctic); color: #fff; }
+    .wp-step.active    .wp-bubble { background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); border-color: var(--c-midnight); color: #fff; box-shadow: 0 0 0 7px rgba(68,107,149,.15), 0 8px 24px rgba(40,64,91,.32); }
+    .wp-step.upcoming  .wp-bubble { background: #fff; border-color: rgba(208,223,235,.95); color: var(--text-muted); }
+    .wp-bubble svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wp-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; text-align: center; line-height: 1.2; }
+    .wp-step.completed .wp-lbl { color: var(--c-arctic); }
+    .wp-step.active    .wp-lbl { color: var(--c-midnight); font-weight: 800; letter-spacing: .06em; }
+    .wp-step.upcoming  .wp-lbl { color: var(--text-muted); }
+    .wp-sep { width: 1px; height: 44px; background: rgba(208,223,235,.6); margin: 0 22px; flex-shrink: 0; align-self: center; }
+    .wp-next-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 11px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .18s, transform .1s; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 18px rgba(68,107,149,.35); align-self: center; }
+    .wp-next-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .wp-next-btn:disabled { background: rgba(208,223,235,.52); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+    .wp-next-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wp-prev-btn { order: 1; display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 11px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.45); color: var(--text-strong); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, transform .1s; white-space: nowrap; flex-shrink: 0; align-self: center; }
+    .wp-prev-btn:hover { background: rgba(255,255,255,.85); transform: translateY(-1px); }
+    .wp-prev-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 980px) { .wp-bubble { width: 44px; height: 44px; font-size: 15px; } .wp-steps-outer::before { top: 22px; } .wp-fill { top: 22px; } .wp-lbl { font-size: 10px; } }
+    @media (max-width: 760px) { .wp-lbl { display: none; } .wp-bubble { width: 36px; height: 36px; font-size: 13px; } .wp-bubble svg { width: 14px; height: 14px; } .wp-steps-outer::before { top: 18px; } .wp-fill { top: 18px; } .wp-btn-label { display: none; } .wp-prev-btn-label { display: none; } .workflow-progress-wrap { padding: 18px 16px; } }
+    @media (max-width: 500px) { .wp-sep { margin: 0 10px; } .wp-next-btn { padding: 10px 12px; } }
+
+    /* ── Logout modal ────────────────────────────────────────────────────────── */
+    .logout-overlay { position: fixed; inset: 0; background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all .25s; z-index: 300; }
+    .logout-overlay.active { opacity: 1; visibility: visible; }
+    .logout-modal { background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px; text-align: center; width: 400px; max-width: 92%; box-shadow: 0 28px 70px rgba(0,0,0,.22); transform: scale(.95); transition: transform .25s; }
+    .logout-overlay.active .logout-modal { transform: scale(1); }
+    .logout-ring { width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1); display: grid; place-items: center; margin: 0 auto 14px; }
+    .logout-ring svg { width: 24px; height: 24px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--text-strong); }
+    .logout-modal p  { margin: 0 0 22px; font-size: 13px; color: var(--text-muted); }
+    .logout-actions { display: flex; justify-content: center; gap: 12px; }
+    .btn-logout-cancel { padding: 10px 20px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-logout-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-logout-confirm { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    .toast { position: fixed; bottom: 26px; right: 26px; z-index: 400; display: flex; align-items: center; gap: 10px; padding: 13px 20px; border-radius: 14px; font-size: 13px; font-weight: 600; color: #fff; box-shadow: 0 10px 32px rgba(0,0,0,.2); transform: translateY(90px); opacity: 0; transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: linear-gradient(135deg,#34d399,#059669); }
+    .toast.error   { background: linear-gradient(135deg,#f87171,#dc2626); }
+    .toast.info    { background: linear-gradient(135deg,var(--c-ice),var(--c-arctic)); }
+    .toast svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ════════════════════════════════════════════════════════════
+       PAGE-SPECIFIC STYLES
+    ════════════════════════════════════════════════════════════ */
+
+    /* Page header */
+    .ag-page-header { margin-bottom: 22px; }
+    .ag-page-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 800; color: var(--text-strong); }
+    .ag-page-header p  { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* Shared card shell */
+    .ag-card { border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; }
+    .ag-card-head { padding: 18px 22px 16px; border-bottom: 1px solid rgba(208,223,235,.45); display: flex; align-items: center; gap: 12px; }
+    .ag-card-icon { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background: linear-gradient(135deg, var(--c-ice), var(--c-arctic)); display: grid; place-items: center; }
+    .ag-card-icon svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .ag-card-title { font-size: 15px; font-weight: 700; color: var(--text-strong); }
+    .ag-card-body { padding: 22px; }
+
+    /* ── Exam select ─────────────────────────────────────────────────────────── */
+    .ag-field-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .ag-select-wrap { position: relative; margin-bottom: 20px; }
+    .ag-select-wrap select { width: 100%; appearance: none; -webkit-appearance: none; padding: 11px 40px 11px 14px; border-radius: 11px; border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.65); color: var(--text-strong); font-size: 13px; outline: none; cursor: pointer; transition: border-color .18s, box-shadow .18s; }
+    .ag-select-wrap select:focus { border-color: var(--c-ice); background: #fff; box-shadow: 0 0 0 3px rgba(104,149,188,.15); }
+    .ag-select-wrap select:disabled { opacity: .55; cursor: not-allowed; }
+    .ag-sel-chevron { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; width: 16px; height: 16px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Status row ──────────────────────────────────────────────────────────── */
+    .status-row { display: flex; align-items: center; gap: 0; padding: 14px 0 2px; }
+    .status-item { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 0 16px; }
+    .status-item:first-child { padding-left: 0; }
+    .status-item:last-child  { padding-right: 0; }
+    .status-key { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .status-sep { width: 1px; height: 36px; background: rgba(208,223,235,.6); flex-shrink: 0; }
+
+    /* status value styles */
+    .sv-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .sv-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .sv-badge.graded    { background: rgba(16,185,129,.1);  color: #065f46; border: 1px solid rgba(16,185,129,.25); }
+    .sv-badge.graded::before    { background: #10b981; }
+    .sv-badge.reviewing { background: rgba(59,130,246,.1);  color: #1e3a8a; border: 1px solid rgba(59,130,246,.2); }
+    .sv-badge.reviewing::before { background: #3b82f6; }
+    .sv-badge.pending   { background: rgba(245,158,11,.1);  color: #78350f; border: 1px solid rgba(245,158,11,.25); }
+    .sv-badge.pending::before   { background: #f59e0b; }
+    .sv-badge.none      { background: rgba(148,163,184,.1); color: var(--text-muted); border: 1px solid rgba(148,163,184,.2); }
+    .sv-badge.none::before      { background: #94a3b8; }
+
+    .sv-files { font-size: 14px; font-weight: 700; color: var(--text-strong); }
+    .sv-files.zero { color: var(--text-muted); }
+
+    .sv-rubric { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+    .sv-rubric.ok    { color: #059669; }
+    .sv-rubric.missing { color: var(--text-muted); }
+    .sv-rubric svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Readiness badge variants */
+    .sv-badge.ready   { background: rgba(16,185,129,.1);  color: #065f46; border: 1px solid rgba(16,185,129,.25); }
+    .sv-badge.ready::before   { background: #10b981; }
+    .sv-badge.blocked { background: rgba(239,68,68,.08);  color: #991b1b; border: 1px solid rgba(239,68,68,.2);  }
+    .sv-badge.blocked::before { background: #ef4444; }
+
+    /* Grading basis display */
+    .sv-basis { font-size: 13px; font-weight: 700; }
+    .sv-basis.rubric    { color: #059669; }
+    .sv-basis.answerkey { color: #059669; }
+    .sv-basis.hybrid    { color: #6d3cd2; }
+    .sv-basis.none      { color: var(--text-muted); }
+
+    @media (max-width: 600px) {
+      .status-row { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .status-sep { display: none; }
+      .status-item { padding: 0; }
+    }
+
+    /* ── Student Scope Card ──────────────────────────────────────────────────── */
+
+    /* Radio pills */
+    .scope-pills { display: flex; gap: 10px; margin-bottom: 18px; }
+    .scope-pill  {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 18px; border-radius: 10px; cursor: pointer;
+      border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.42);
+      font-size: 13px; font-weight: 600; color: var(--text-strong);
+      transition: border-color .15s, background .15s, box-shadow .15s;
+      user-select: none;
+    }
+    .scope-pill:hover { background: rgba(255,255,255,.68); border-color: rgba(68,107,149,.35); }
+    .scope-pill.active {
+      border-color: var(--c-arctic); background: rgba(68,107,149,.09);
+      box-shadow: 0 0 0 3px rgba(68,107,149,.12);
+      color: var(--c-arctic);
+    }
+    .scope-pill input[type="radio"] { display: none; }
+    .scope-pill-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.55);
+      transition: border-color .15s, background .15s;
+    }
+    .scope-pill.active .scope-pill-dot {
+      border-color: var(--c-arctic); background: var(--c-arctic);
+    }
+
+    /* Student selection panel */
+    #studentScopePanel { display: none; }
+    #studentScopePanel.open { display: block; }
+
+    .scope-quick-actions {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .btn-scope-action {
+      padding: 5px 13px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      border: 1.5px solid rgba(208,223,235,.85); background: rgba(255,255,255,.5);
+      color: var(--text-strong); cursor: pointer; transition: background .14s;
+    }
+    .btn-scope-action:hover { background: rgba(255,255,255,.85); }
+
+    /* Student table */
+    .scope-table-wrap { border-radius: 10px; border: 1px solid rgba(208,223,235,.65); overflow: hidden; }
+    .scope-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .scope-table th {
+      background: rgba(208,223,235,.25); padding: 9px 14px;
+      text-align: left; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted);
+      border-bottom: 1px solid rgba(208,223,235,.55);
+    }
+    .scope-table th:first-child, .scope-table td:first-child { width: 40px; text-align: center; padding-left: 10px; }
+    .scope-table td { padding: 9px 14px; border-bottom: 1px solid rgba(208,223,235,.3); vertical-align: middle; }
+    .scope-table tr:last-child td { border-bottom: none; }
+    .scope-table tr:hover td { background: rgba(255,255,255,.5); }
+    .scope-table input[type="checkbox"] { cursor: pointer; width: 15px; height: 15px; accent-color: var(--c-arctic); }
+
+    /* Status badge in table */
+    .gs-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .gs-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .gs-badge.graded        { background: rgba(16,185,129,.1);  color: #065f46; border: 1px solid rgba(16,185,129,.25); }
+    .gs-badge.graded::before { background: #10b981; }
+    .gs-badge.pending-review { background: rgba(59,130,246,.1); color: #1e3a8a; border: 1px solid rgba(59,130,246,.2); }
+    .gs-badge.pending-review::before { background: #3b82f6; }
+    .gs-badge.failed        { background: rgba(239,68,68,.08);  color: #991b1b; border: 1px solid rgba(239,68,68,.2); }
+    .gs-badge.failed::before { background: #ef4444; }
+    .gs-badge.not-graded    { background: rgba(148,163,184,.1); color: var(--text-muted); border: 1px solid rgba(148,163,184,.2); }
+    .gs-badge.not-graded::before { background: #94a3b8; }
+
+    /* Validation error */
+    #scopeValidationErr {
+      display: none; margin-top: 12px;
+      background: rgba(239,68,68,.07); border: 1.5px solid rgba(239,68,68,.25);
+      border-radius: 9px; padding: 10px 14px;
+      font-size: 12.5px; font-weight: 600; color: #dc2626;
+    }
+    #scopeValidationErr.show { display: flex; align-items: center; gap: 8px; }
+
+    /* Counter badge next to card title */
+    .scope-count-badge {
+      margin-left: auto; padding: 3px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(68,107,149,.1); color: var(--c-arctic);
+      border: 1px solid rgba(68,107,149,.2);
+    }
+
+    /* Loading skeleton */
+    .scope-loading { padding: 18px 0; text-align: center; font-size: 13px; color: var(--text-muted); }
+
+    /* ── Engine card ─────────────────────────────────────────────────────────── */
+    .engine-card-body {
+      padding: 40px 32px 36px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    /* Each state panel must also center its own children */
+    #stateIdle, #stateRunning, #stateDone, #stateError {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; width: 100%;
+    }
+
+    /* Robot icon */
+    .bot-ring {
+      width: 96px; height: 96px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--c-ice), var(--c-arctic), var(--c-midnight));
+      display: grid; place-items: center; margin-bottom: 24px;
+      box-shadow: 0 8px 28px rgba(68,107,149,.3);
+      transition: transform .3s;
+    }
+    .bot-ring.pulsing {
+      animation: bot-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes bot-pulse {
+      0%, 100% { box-shadow: 0 8px 28px rgba(68,107,149,.3), 0 0 0 0 rgba(68,107,149,.25); }
+      50%       { box-shadow: 0 8px 28px rgba(68,107,149,.3), 0 0 0 18px rgba(68,107,149,0); }
+    }
+    .bot-ring.done-ring {
+      background: linear-gradient(135deg, #34d399, #059669);
+      box-shadow: 0 8px 28px rgba(16,185,129,.3);
+      animation: none;
+    }
+    .bot-ring.error-ring {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      box-shadow: 0 8px 28px rgba(245,158,11,.25);
+      animation: none;
+    }
+    .bot-ring svg { width: 46px; height: 46px; }
+
+    /* Idle text */
+    .engine-title { font-size: 20px; font-weight: 800; color: var(--text-strong); margin: 0 0 10px; line-height: 1.25; }
+    .engine-sub   { font-size: 13px; color: var(--text-muted); margin: 0 0 32px; max-width: 360px; line-height: 1.6; }
+
+    /* Start button */
+    .btn-start {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 32px; border-radius: 13px; border: none;
+      background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: opacity .18s, transform .12s;
+      box-shadow: 0 5px 22px rgba(68,107,149,.4);
+    }
+    .btn-start:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .btn-start:active:not(:disabled) { transform: translateY(0); }
+    .btn-start:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; transform: none; }
+    .btn-start svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Progress area */
+    .progress-wrap { width: 100%; max-width: 380px; margin-bottom: 16px; }
+    .progress-track { height: 8px; background: rgba(208,223,235,.5); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--c-ice), var(--c-arctic), var(--c-midnight)); border-radius: 4px; width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+    .progress-meta { display: flex; align-items: center; justify-content: space-between; }
+    .progress-phase { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+    .progress-pct   { font-size: 16px; font-weight: 900; color: var(--c-midnight); }
+
+    /* Cancel button */
+    .btn-cancel-grading {
+      margin-top: 20px; padding: 9px 22px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.45);
+      color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .btn-cancel-grading:hover { background: rgba(255,255,255,.8); color: var(--text-strong); }
+
+    /* Done state */
+    .done-stats { display: flex; align-items: center; gap: 0; margin-bottom: 28px; }
+    .done-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 20px; }
+    .done-stat:not(:last-child) { border-right: 1px solid rgba(208,223,235,.6); }
+    .done-stat-val { font-size: 24px; font-weight: 900; color: var(--text-strong); line-height: 1; }
+    .done-stat-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+
+    .done-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .btn-view-results { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 11px; border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight)); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; transition: opacity .18s; box-shadow: 0 4px 14px rgba(68,107,149,.3); }
+    .btn-view-results:hover { opacity: .88; }
+    .btn-view-results svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-run-again { padding: 12px 22px; border-radius: 11px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.5); color: var(--text-strong); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-run-again:hover { background: rgba(255,255,255,.85); }
+    .done-export { margin-top: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .done-export-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-right: 4px; }
+    .btn-export { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 9px; border: 1.5px solid rgba(104,149,188,.45); background: rgba(255,255,255,.55); color: var(--c-arctic); font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; transition: background .15s, border-color .15s; }
+    .btn-export:hover { background: rgba(255,255,255,.9); border-color: var(--c-arctic); }
+    .btn-export svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Error/cancelled state */
+    .engine-err-msg { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+
+    /* ── Regrading confirmation modal ────────────────────────────────────── */
+    .regrade-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .22s; z-index: 380;
+    }
+    .regrade-overlay.active { opacity: 1; visibility: visible; }
+    .regrade-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 480px; max-width: 94%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22);
+      transform: scale(.95); transition: transform .22s;
+    }
+    .regrade-overlay.active .regrade-modal { transform: scale(1); }
+    .regrade-ring {
+      width: 56px; height: 56px; border-radius: 50%; background: rgba(245,158,11,.1);
+      display: grid; place-items: center; margin: 0 auto 14px;
+    }
+    .regrade-ring svg { width: 26px; height: 26px; stroke: #d97706; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .regrade-modal h3 { margin: 0 0 8px; font-size: 17px; font-weight: 800; color: var(--text-strong); }
+    .regrade-modal p  { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .regrade-meta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 16px; border-radius: 10px; margin-bottom: 20px;
+      background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25);
+      font-size: 13px; font-weight: 700; color: #92400e;
+    }
+    .regrade-meta svg { width: 15px; height: 15px; stroke: #d97706; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .regrade-actions { display: flex; flex-direction: column; gap: 10px; }
+    .btn-apply-results {
+      padding: 12px 22px; border-radius: 10px;
+      border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s;
+    }
+    .btn-apply-results:hover { opacity: .88; }
+    .btn-keep-results {
+      padding: 12px 22px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4);
+      color: var(--text-strong); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-keep-results:hover { background: rgba(255,255,255,.8); }
+
+    /* ── Report History Card ──────────────────────────────────────────────── */
+
+    /* Collapsible header */
+    .rh-header--toggle {
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--t);
+    }
+    .rh-header--toggle:hover { background: rgba(208,223,235,.15); }
+
+    /* Title + description group */
+    .rh-title-group { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    .rh-desc { font-size: 12px; color: var(--text-muted); font-weight: 400; margin: 0; line-height: 1.4; }
+
+    /* Chevron */
+    .rh-chevron {
+      margin-left: auto;
+      flex-shrink: 0;
+      width: 17px; height: 17px;
+      stroke: var(--text-muted); fill: none;
+      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+      transition: transform .2s ease;
+    }
+
+    /* Collapsible body — open state has NO overflow/height constraints */
+    .rh-body {
+      transition: opacity .25s ease;
+    }
+    .rh-body.closed {
+      height: 0;
+      overflow: hidden;
+      opacity: 0;
+    }
+
+    /* Collapsed card state */
+    #reportHistoryCard.rh-collapsed .rh-chevron { transform: rotate(-90deg); }
+    #reportHistoryCard.rh-collapsed .rh-header--toggle { border-bottom-color: transparent; }
+
+    .rh-empty { padding: 32px 22px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    .rh-loading { padding: 24px 22px; text-align: center; font-size: 13px; color: var(--text-muted); }
+
+    .rh-list { display: flex; flex-direction: column; gap: 0; }
+
+    .rh-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 1fr 1fr 1fr auto auto;
+      align-items: center;
+      gap: 0;
+      padding: 14px 22px;
+      border-bottom: 1px solid rgba(208,223,235,.35);
+      transition: background .15s;
+    }
+    .rh-row:last-child { border-bottom: none; }
+    .rh-row:hover { background: rgba(255,255,255,.38); }
+
+    .rh-cell { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; min-width: 0; }
+    .rh-cell:first-child { padding-left: 0; }
+
+    .rh-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); white-space: nowrap; }
+    .rh-value { font-size: 13px; font-weight: 700; color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rh-value.muted { color: var(--text-muted); font-weight: 600; }
+
+    /* Status badges */
+    .rh-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .rh-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .rh-badge.active   { background: rgba(16,185,129,.1);  color: #065f46; border: 1px solid rgba(16,185,129,.25); }
+    .rh-badge.active::before   { background: #10b981; }
+    .rh-badge.draft    { background: rgba(245,158,11,.1);  color: #78350f; border: 1px solid rgba(245,158,11,.25); }
+    .rh-badge.draft::before    { background: #f59e0b; }
+    .rh-badge.replaced { background: rgba(148,163,184,.1); color: var(--text-muted); border: 1px solid rgba(148,163,184,.2); }
+    .rh-badge.replaced::before { background: #94a3b8; }
+
+    /* Download buttons */
+    .rh-downloads { display: flex; align-items: center; gap: 5px; padding: 0 8px; }
+    .btn-rh-dl {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 8px;
+      border: 1.5px solid rgba(104,149,188,.4); background: rgba(255,255,255,.55);
+      color: var(--c-arctic); font-size: 11px; font-weight: 700;
+      cursor: pointer; text-decoration: none; transition: background .14s, border-color .14s;
+      white-space: nowrap;
+    }
+    .btn-rh-dl:hover { background: rgba(255,255,255,.9); border-color: var(--c-arctic); }
+    .btn-rh-dl svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-rh-dl:disabled, .btn-rh-dl.loading { opacity: .55; cursor: not-allowed; pointer-events: none; }
+
+    /* Delete button */
+    .btn-rh-del {
+      padding: 5px 8px; border-radius: 8px;
+      border: 1.5px solid rgba(239,68,68,.25); background: rgba(239,68,68,.04);
+      color: #dc2626; cursor: pointer; transition: background .14s;
+      display: inline-flex; align-items: center;
+    }
+    .btn-rh-del:hover { background: rgba(239,68,68,.1); }
+    .btn-rh-del svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Delete active report warning banner inside delete confirm */
+    .rh-del-warn {
+      display: none; margin-top: 10px; padding: 10px 14px;
+      background: rgba(239,68,68,.07); border: 1.5px solid rgba(239,68,68,.22);
+      border-radius: 9px; font-size: 12px; font-weight: 600; color: #dc2626; line-height: 1.5;
+    }
+    .rh-del-warn.show { display: block; }
+
+    /* Activate-report modal */
+    .activate-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .22s; z-index: 360;
+    }
+    .activate-overlay.active { opacity: 1; visibility: visible; }
+    .activate-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 460px; max-width: 94%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22);
+      transform: scale(.95); transition: transform .22s;
+    }
+    .activate-overlay.active .activate-modal { transform: scale(1); }
+    .activate-ring {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(68,107,149,.1);
+      display: grid; place-items: center; margin: 0 auto 14px;
+    }
+    .activate-ring svg { width: 26px; height: 26px; stroke: var(--c-arctic); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .activate-modal h3 { margin: 0 0 8px; font-size: 17px; font-weight: 800; color: var(--text-strong); }
+    .activate-modal p  { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .activate-actions  { display: flex; flex-direction: column; gap: 10px; }
+    .btn-make-active {
+      padding: 12px 22px; border-radius: 10px;
+      border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s;
+    }
+    .btn-make-active:hover { opacity: .88; }
+    .btn-keep-prev {
+      padding: 12px 22px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4);
+      color: var(--text-strong); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-keep-prev:hover { background: rgba(255,255,255,.8); }
+
+    /* Delete confirmation modal (reuse cancel-confirm style) */
+    .del-report-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .22s; z-index: 370;
+    }
+    .del-report-overlay.active { opacity: 1; visibility: visible; }
+    .del-report-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 420px; max-width: 92%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22);
+      transform: scale(.95); transition: transform .22s;
+    }
+    .del-report-overlay.active .del-report-modal { transform: scale(1); }
+    .del-report-ring {
+      width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,.1);
+      display: grid; place-items: center; margin: 0 auto 14px;
+    }
+    .del-report-ring svg { width: 26px; height: 26px; stroke: #ef4444; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .del-report-modal h3 { margin: 0 0 8px; font-size: 17px; font-weight: 800; color: var(--text-strong); }
+    .del-report-modal p  { margin: 0 0 6px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .del-report-actions  { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+    .btn-del-cancel { padding: 10px 22px; border-radius: 10px; border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-del-cancel:hover { background: rgba(255,255,255,.75); }
+    .btn-del-confirm { padding: 10px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-del-confirm:hover { opacity: .88; }
+
+    @media (max-width: 860px) {
+      .rh-row { grid-template-columns: 80px 1fr 1fr 1fr auto auto; }
+      .rh-row .rh-cell:nth-child(4) { display: none; }
+    }
+    @media (max-width: 620px) {
+      .rh-row { grid-template-columns: 1fr 1fr auto; gap: 8px; padding: 12px 16px; flex-wrap: wrap; display: flex; flex-direction: column; align-items: flex-start; }
+      .rh-downloads { padding: 0; }
+    }
+
+    /* ── Model Selection — collapsible header ───────────────────────────────── */
+    .ag-card-head--toggle {
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--t);
+    }
+    .ag-card-head--toggle:hover { background: rgba(208,223,235,.15); }
+    .ms-chevron {
+      margin-left: auto;
+      flex-shrink: 0;
+      width: 17px; height: 17px;
+      stroke: var(--text-muted); fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: transform .25s ease;
+    }
+    .ms-body-wrap {
+      overflow: hidden;
+      max-height: 800px;
+      transition: max-height .3s ease, opacity .25s ease;
+      opacity: 1;
+    }
+    #modelSelectionCard.ms-collapsed .ms-body-wrap {
+      max-height: 0;
+      opacity: 0;
+    }
+    #modelSelectionCard.ms-collapsed .ms-chevron {
+      transform: rotate(-90deg);
+    }
+    #modelSelectionCard.ms-collapsed .ag-card-head--toggle {
+      border-bottom-color: transparent;
+    }
+
+    /* ── Model Selection Cards ─────────────────────────────────────────────── */
+    .ms-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    @media (max-width: 860px) { .ms-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .ms-grid { grid-template-columns: 1fr; } }
+
+    /* ── HIDE_INDIVIDUAL_MODELS — applied via JS flag ───────────────────────── */
+    /* Pure CSS class toggling — no DOM removal, no logic change */
+    .model-hidden { display: none !important; }
+
+    /* When only the Consensus card remains, shrink the grid to a single
+       natural-width column so it doesn't stretch across 4 empty tracks. */
+    .ms-grid.ms-solo { grid-template-columns: minmax(160px, 280px); }
+
+    /* Remove the "Recommended" badge when it is the only visible card */
+    .ms-grid.ms-solo .ms-rec-badge { display: none !important; }
+
+    .ms-card {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+      padding: 14px 38px 14px 16px; border-radius: 12px; cursor: pointer;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.42);
+      transition: border-color .15s, background .15s, box-shadow .15s;
+      position: relative; user-select: none;
+    }
+    .ms-card:hover { background: rgba(255,255,255,.68); border-color: rgba(68,107,149,.35); }
+    .ms-card.ms-selected {
+      border-color: var(--c-arctic); background: rgba(68,107,149,.09);
+      box-shadow: 0 0 0 3px rgba(68,107,149,.12);
+    }
+
+    /* Checkbox check indicator — top-right of every card */
+    .ms-card::after {
+      content: '';
+      position: absolute; top: 11px; right: 11px;
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid rgba(208,223,235,.8);
+      background: rgba(255,255,255,.55);
+      transition: border-color .15s, background .15s;
+      pointer-events: none;
+    }
+    .ms-card.ms-selected::after {
+      border-color: var(--c-arctic); background: var(--c-arctic);
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+      background-size: 11px 11px; background-position: center; background-repeat: no-repeat;
+    }
+
+    /* ── Per-model selected-state color overrides ───────────────────────────── */
+
+    /* Claude — warm orange */
+    .ms-card[data-model="claude"]:hover { border-color: rgba(200,100,50,.4); }
+    .ms-card[data-model="claude"].ms-selected {
+      border-color: #c8643a; background: rgba(200,100,58,.08);
+      box-shadow: 0 0 0 3px rgba(200,100,58,.12);
+    }
+    .ms-card[data-model="claude"].ms-selected::after {
+      border-color: #c8643a; background-color: #c8643a;
+    }
+
+    /* ChatGPT / OpenAI — charcoal black (#1a1a1a)
+       Mirrors the ChatGPT brand identity: black knot logo on white.
+       Uses the same dark charcoal as the actual ChatGPT product UI.
+       #modelGrid scope = ID-level specificity, unconditionally overrides all class-only rules. */
+    #modelGrid .ms-card[data-model="openai"]:hover {
+      border-color: rgba(26,26,26,.35);
+      background:   rgba(26,26,26,.05);
+    }
+    #modelGrid .ms-card[data-model="openai"].ms-selected {
+      border-color: #1a1a1a;
+      background:   rgba(26,26,26,.09);
+      box-shadow:   0 0 0 3px rgba(26,26,26,.14);
+    }
+    #modelGrid .ms-card[data-model="openai"].ms-selected::after {
+      border-color:     #1a1a1a;
+      background-color: #1a1a1a;
+    }
+
+    /* DeepSeek — indigo/blue */
+    #modelGrid .ms-card[data-model="deepseek"]:hover {
+      border-color: rgba(79,70,229,.35);
+      background:   rgba(79,70,229,.05);
+    }
+    #modelGrid .ms-card[data-model="deepseek"].ms-selected {
+      border-color: #4f46e5;
+      background:   rgba(79,70,229,.09);
+      box-shadow:   0 0 0 3px rgba(79,70,229,.14);
+    }
+    #modelGrid .ms-card[data-model="deepseek"].ms-selected::after {
+      border-color:     #4f46e5;
+      background-color: #4f46e5;
+    }
+
+    /* Logo img replaces the letter-badge div — SVG provides its own background */
+    .ms-card-icon {
+      width: 32px; height: 32px; max-height: 28px; border-radius: 9px; flex-shrink: 0;
+      display: block; object-fit: contain; margin-bottom: 4px;
+    }
+    .ms-card-name { font-size: 13px; font-weight: 700; color: var(--text-strong); line-height: 1.2; }
+    .ms-card-sub  { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+    /* Consensus card — amber accent */
+    .ms-card.ms-consensus { border-color: rgba(217,119,6,.3); background: rgba(251,191,36,.05); }
+    .ms-card.ms-consensus:hover { background: rgba(251,191,36,.1); border-color: rgba(217,119,6,.5); }
+    .ms-card.ms-consensus.ms-selected {
+      border-color: var(--c-arctic); background: rgba(68,107,149,.09);
+      box-shadow: 0 0 0 3px rgba(68,107,149,.12);
+    }
+    .ms-card.ms-consensus.ms-selected::after {
+      border-color: var(--c-arctic); background-color: var(--c-arctic);
+    }
+    .ms-rec-badge {
+      position: absolute; top: 10px; right: 30px;
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+      background: rgba(217,119,6,.12); color: #92400e;
+      font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+      transition: opacity .15s; pointer-events: none;
+    }
+    /* Badge hides when selected — check indicator takes its place */
+    .ms-card.ms-consensus.ms-selected .ms-rec-badge { opacity: 0; }
+    /* Grouped mini-logos in Collaborative Consensus card */
+    .ms-dot-row { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+    .ms-dot {
+      width: 18px; height: 18px; max-height: 18px; border-radius: 5px; flex-shrink: 0;
+      display: block; object-fit: contain;
+    }
+    .ms-all-label { font-size: 11px; color: #92400e; font-weight: 700; }
+    .ms-consensus-helper { font-size: 10.5px; color: var(--text-muted); line-height: 1.45; margin-top: 3px; max-width: 140px; }
+
+    /* ── Model selection locked state ─────────────────────────────────────── */
+    #modelGrid.ms-locked .ms-card {
+      cursor: not-allowed;
+      opacity: 0.52;
+      pointer-events: none;
+    }
+    #modelGrid.ms-locked .ms-card.ms-selected {
+      opacity: 0.76;
+    }
+    .ms-lock-notice {
+      display: none; align-items: center; justify-content: center; gap: 6px;
+      margin-top: 10px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+    }
+    .ms-lock-notice.visible { display: flex; }
+    .ms-lock-notice svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Cancel confirmation modal ─────────────────────────────────────────── */
+    .cancel-confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,20,40,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all .22s; z-index: 350;
+    }
+    .cancel-confirm-overlay.active { opacity: 1; visibility: visible; }
+    .cancel-confirm-modal {
+      background: rgba(255,255,255,.97); padding: 34px 30px; border-radius: 20px;
+      text-align: center; width: 420px; max-width: 92%;
+      box-shadow: 0 28px 70px rgba(0,0,0,.22);
+      transform: scale(.95); transition: transform .22s;
+    }
+    .cancel-confirm-overlay.active .cancel-confirm-modal { transform: scale(1); }
+    .cancel-confirm-ring {
+      width: 56px; height: 56px; border-radius: 50%; background: rgba(245,158,11,.1);
+      display: grid; place-items: center; margin: 0 auto 14px;
+    }
+    .cancel-confirm-ring svg { width: 26px; height: 26px; stroke: #d97706; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .cancel-confirm-modal h3 { margin: 0 0 8px; font-size: 17px; font-weight: 800; color: var(--text-strong); }
+    .cancel-confirm-modal p  { margin: 0 0 24px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .cancel-confirm-actions  { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn-keep-grading {
+      padding: 10px 22px; border-radius: 10px;
+      border: none; background: linear-gradient(135deg, var(--c-arctic), var(--c-midnight));
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s;
+    }
+    .btn-keep-grading:hover { opacity: .88; }
+    .btn-confirm-cancel {
+      padding: 10px 22px; border-radius: 10px;
+      border: 1.5px solid rgba(208,223,235,.8); background: rgba(255,255,255,.4);
+      color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .btn-confirm-cancel:hover { background: rgba(239,68,68,.06); border-color: rgba(239,68,68,.3); color: #dc2626; }
+  </style>
+</head>
+<body class="bg-frost">
+<div class="app">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo">
+      <div class="name">Taqdeer</div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav">
+        <p class="small muted">MAIN</p>
+        <a href="./dashboard.html">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">GRADING WORKFLOW</p>
+        <a href="./manage-exams.html">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Manage Exams</span>
+        </a>
+        <a href="./rubrics.html">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span>Rubric &amp; Answer Key</span>
+        </a>
+        <a href="./answer-files.html">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Answer Files</span>
+        </a>
+        <a href="./auto-grading.html" class="active">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Grading</span>
+        </a>
+        <a href="./results-reviews.html">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Results Review</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">INSIGHTS</p>
+        <a href="./analytics.html">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </a>
+        <a href="./learing-gaps.html">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>Learning Gap</span>
+        </a>
+        <a href="./archive.html">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span>Archive</span>
+        </a>
+        <p class="small muted" style="margin-top:18px;">ACCOUNT</p>
+        <a href="./profile.html">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </a>
+        <a href="#" id="logoutTrigger">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════════════════════════ -->
+  <main>
+
+    <!-- Topbar -->
+    <div class="topbar glass">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 style="margin:0;font-size:20px;">Auto-Grading</h2>
+          <div class="bc" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Dashboard &rsaquo; Auto-Grading</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a href="./profile.html" class="user-chip">
+          <div class="chip-av" id="chipAvatar">?</div>
+          <span id="chipName">Instructor</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Workflow Progress Indicator (step 4 active) -->
+    <div class="workflow-progress-wrap glass">
+      <div class="wp-steps-outer">
+        <div class="wp-fill" id="wpFill"></div>
+        <div class="wp-steps-row">
+          <div class="wp-step" id="wps-1"><div class="wp-bubble">1</div><div class="wp-lbl">Exam Info</div></div>
+          <div class="wp-step" id="wps-2"><div class="wp-bubble">2</div><div class="wp-lbl">Rubric &amp; Answer Key</div></div>
+          <div class="wp-step" id="wps-3"><div class="wp-bubble">3</div><div class="wp-lbl">Upload Answers</div></div>
+          <div class="wp-step" id="wps-4"><div class="wp-bubble">4</div><div class="wp-lbl">AI Grading</div></div>
+          <div class="wp-step" id="wps-5"><div class="wp-bubble">5</div><div class="wp-lbl">Review Grades</div></div>
+        </div>
+      </div>
+      <div class="wp-nav-row">
+        <button class="wp-prev-btn" onclick="window.location.href='./answer-files.html'">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <span class="wp-prev-btn-label">Upload Answers</span>
+        </button>
+        <div class="wp-next-wrap" style="display:flex;flex-direction:column;align-items:center;">
+          <button class="wp-next-btn" id="progressNextBtn" disabled>
+            <span class="wp-btn-label">Next: Review Grades</span>
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          <span id="nextHint" style="font-size:11px;color:var(--text-muted);margin-top:5px;text-align:center;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="ag-page-header">
+      <h1>Auto-Grading</h1>
+      <p>Trigger AI-powered grading for uploaded exams</p>
+    </div>
+
+    <!-- ── Card 1: Select Exam ───────────────────────────────────────────────── -->
+    <div class="ag-card glass">
+      <div class="ag-card-head">
+        <div class="ag-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <span class="ag-card-title">Select Exam</span>
+      </div>
+      <div class="ag-card-body">
+
+        <label class="ag-field-label" for="examSelect">Exam</label>
+        <div class="ag-select-wrap">
+          <select id="examSelect">
+            <option value="">Loading exams…</option>
+          </select>
+          <svg class="ag-sel-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+
+        <div class="status-row" id="statusRow" style="display:none;">
+          <div class="status-item">
+            <span class="status-key">Readiness</span>
+            <span id="examStatusBadge" class="sv-badge none">—</span>
+          </div>
+          <div class="status-sep"></div>
+          <div class="status-item">
+            <span class="status-key">Answer Files</span>
+            <span id="answerFilesVal" class="sv-files zero">—</span>
+          </div>
+          <div class="status-sep"></div>
+          <div class="status-item">
+            <span class="status-key">Grading Basis</span>
+            <span id="gradingBasisVal" class="sv-basis none">—</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Card 2: Grading Strategy ─────────────────────────────────────────── -->
+    <div class="ag-card glass" id="modelSelectionCard">
+      <div class="ag-card-head ag-card-head--toggle" id="modelSelectionToggle" role="button" aria-expanded="true" aria-controls="modelSelectionBody">
+        <div class="ag-card-icon">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <span class="ag-card-title">AI Model Selection</span>
+        <svg class="ms-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="ms-body-wrap" id="modelSelectionBody">
+      <div class="ag-card-body">
+        <label class="ag-field-label" style="margin-bottom:12px;">Select one or more grading strategies to evaluate student answers using the rubric, the answer key, or both</label>
+        <div class="ms-grid" id="modelGrid">
+
+          <!-- Claude -->
+          <div class="ms-card" data-model="claude">
+            <img class="ms-card-icon" src="../assets/icons/models/claude.png" alt="Claude" draggable="false">
+            <div class="ms-card-name">Claude</div>
+            <div class="ms-card-sub">Anthropic</div>
+          </div>
+
+          <!-- ChatGPT / OpenAI -->
+          <div class="ms-card" data-model="openai">
+            <img class="ms-card-icon" src="../assets/icons/models/chatgpt.png" alt="ChatGPT" draggable="false">
+            <div class="ms-card-name">ChatGPT</div>
+            <div class="ms-card-sub">OpenAI</div>
+          </div>
+
+          <!-- DeepSeek -->
+          <div class="ms-card" data-model="deepseek">
+            <img class="ms-card-icon" src="../assets/icons/models/deepseek.png" alt="DeepSeek" draggable="false">
+            <div class="ms-card-name">DeepSeek</div>
+            <div class="ms-card-sub">DeepSeek AI</div>
+          </div>
+
+          <!-- Collaborative Consensus -->
+          <div class="ms-card ms-consensus" data-model="consensus">
+            <span class="ms-rec-badge">Recommended</span>
+            <div class="ms-dot-row">
+              <img class="ms-dot" src="../assets/icons/models/claude.png" alt="Claude" draggable="false">
+              <img class="ms-dot" src="../assets/icons/models/chatgpt.png" alt="ChatGPT" draggable="false">
+            </div>
+            <div class="ms-card-name">Collaborative Consensus</div>
+            <div class="ms-all-label">2 Models</div>
+            <div class="ms-consensus-helper">Claude &amp; ChatGPT grade independently, then discuss disagreements.</div>
+          </div>
+
+        </div>
+        <div class="ms-lock-notice" id="msLockNotice">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Model selection locked during grading
+        </div>
+      </div>
+      </div><!-- /.ms-body-wrap -->
+    </div>
+
+    <!-- ── Card 3: Student Scope ─────────────────────────────────────────────── -->
+    <div class="ag-card glass" id="studentScopeCard" style="display:none;">
+      <div class="ag-card-head">
+        <div class="ag-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <span class="ag-card-title">Students to Grade</span>
+        <span class="scope-count-badge" id="scopeCountBadge" style="display:none;"></span>
+      </div>
+      <div class="ag-card-body">
+
+        <!-- Scope selector pills -->
+        <div class="scope-pills">
+          <label class="scope-pill active" id="pillAll">
+            <input type="radio" name="gradingScope" value="all" checked>
+            <span class="scope-pill-dot"></span>
+            All Students
+          </label>
+          <label class="scope-pill" id="pillSelected">
+            <input type="radio" name="gradingScope" value="selected">
+            <span class="scope-pill-dot"></span>
+            Selected Students
+          </label>
+        </div>
+
+        <!-- Selection panel (shown when "Selected Students" is chosen) -->
+        <div id="studentScopePanel">
+
+          <div class="scope-quick-actions">
+            <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:4px;">Quick select:</span>
+            <button class="btn-scope-action" id="btnSelectUngraded">Ungraded</button>
+            <button class="btn-scope-action" id="btnSelectAll">Select All</button>
+            <button class="btn-scope-action" id="btnClearScope">Clear</button>
+          </div>
+
+          <div id="scopeTableWrap" class="scope-table-wrap">
+            <div class="scope-loading" id="scopeLoading">Loading students…</div>
+            <table class="scope-table" id="scopeTable" style="display:none;">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="scopeCheckAll" title="Toggle all"></th>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Grading Status</th>
+                </tr>
+              </thead>
+              <tbody id="scopeTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="scopeValidationErr">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Please select at least one student to grade.
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Card 4: AI Grading Engine ─────────────────────────────────────────── -->
+    <div class="ag-card glass">
+      <div class="engine-card-body" id="engineCardBody">
+
+        <!-- ·· IDLE STATE ·· -->
+        <div id="stateIdle">
+          <div class="bot-ring" id="botRing">
+            <!-- Robot SVG -->
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Antenna -->
+              <line x1="32" y1="10" x2="32" y2="19" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="32" cy="8" r="3" fill="rgba(255,255,255,0.9)"/>
+              <!-- Head -->
+              <rect x="13" y="19" width="38" height="26" rx="7" fill="rgba(255,255,255,0.92)"/>
+              <!-- Left eye -->
+              <rect x="19" y="26" width="9" height="9" rx="2.5" fill="#446B95"/>
+              <circle cx="21.5" cy="28.5" r="2" fill="white" fill-opacity="0.6"/>
+              <!-- Right eye -->
+              <rect x="36" y="26" width="9" height="9" rx="2.5" fill="#446B95"/>
+              <circle cx="38.5" cy="28.5" r="2" fill="white" fill-opacity="0.6"/>
+              <!-- Mouth segments -->
+              <rect x="19" y="38" width="5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="26.5" y="38" width="5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="34" y="38" width="5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="41.5" y="38" width="3.5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <!-- Neck -->
+              <rect x="27" y="45" width="10" height="5" rx="2" fill="rgba(255,255,255,0.7)"/>
+              <!-- Body -->
+              <rect x="16" y="50" width="32" height="13" rx="6" fill="rgba(255,255,255,0.75)"/>
+              <!-- Body dots -->
+              <circle cx="24" cy="57" r="2.5" fill="#446B95" fill-opacity="0.4"/>
+              <circle cx="32" cy="57" r="2.5" fill="#446B95" fill-opacity="0.4"/>
+              <circle cx="40" cy="57" r="2.5" fill="#446B95" fill-opacity="0.4"/>
+              <!-- Arms -->
+              <rect x="6"  y="52" width="9" height="5" rx="2.5" fill="rgba(255,255,255,0.7)"/>
+              <rect x="49" y="52" width="9" height="5" rx="2.5" fill="rgba(255,255,255,0.7)"/>
+            </svg>
+          </div>
+
+          <h2 class="engine-title" id="engineIdleTitle">Select a Grading Strategy</h2>
+          <p class="engine-sub" id="engineIdleSub">Choose one or more model configurations above to begin grading</p>
+
+          <!-- Marks validation error banner — shown when questions have 0/missing marks -->
+          <div id="marksErrorBanner" style="display:none; width:100%; max-width:480px; margin: 0 auto 18px; background:rgba(239,68,68,0.08); border:1.5px solid rgba(239,68,68,0.28); border-radius:12px; padding:14px 18px; text-align:left;">
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <svg style="flex-shrink:0; margin-top:2px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>
+                <p style="margin:0 0 6px; font-size:13px; font-weight:700; color:#dc2626;">Cannot start grading</p>
+                <p style="margin:0 0 8px; font-size:12.5px; color:#b91c1c; line-height:1.5;">Please assign marks to all questions before starting grading. Questions with missing or zero marks cannot be graded.</p>
+                <p id="marksErrorList" style="margin:0; font-size:12px; font-weight:600; color:#dc2626;"></p>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-start" id="startBtn" disabled>
+            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span id="startBtnText">Select a grading model</span>
+          </button>
+        </div>
+
+        <!-- ·· RUNNING STATE ·· -->
+        <div id="stateRunning" style="display:none;">
+          <div class="bot-ring pulsing" id="botRingRunning">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="32" y1="10" x2="32" y2="19" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="32" cy="8" r="3" fill="rgba(255,255,255,0.9)"/>
+              <rect x="13" y="19" width="38" height="26" rx="7" fill="rgba(255,255,255,0.92)"/>
+              <rect x="19" y="26" width="9" height="9" rx="2.5" fill="#446B95"/>
+              <circle cx="21.5" cy="28.5" r="2" fill="white" fill-opacity="0.6"/>
+              <rect x="36" y="26" width="9" height="9" rx="2.5" fill="#446B95"/>
+              <circle cx="38.5" cy="28.5" r="2" fill="white" fill-opacity="0.6"/>
+              <rect x="19" y="38" width="5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="26.5" y="38" width="5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="34" y="38" width="5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="41.5" y="38" width="3.5" height="3.5" rx="1.5" fill="#446B95" fill-opacity="0.55"/>
+              <rect x="27" y="45" width="10" height="5" rx="2" fill="rgba(255,255,255,0.7)"/>
+              <rect x="16" y="50" width="32" height="13" rx="6" fill="rgba(255,255,255,0.75)"/>
+              <circle cx="24" cy="57" r="2.5" fill="#446B95" fill-opacity="0.4"/>
+              <circle cx="32" cy="57" r="2.5" fill="#446B95" fill-opacity="0.4"/>
+              <circle cx="40" cy="57" r="2.5" fill="#446B95" fill-opacity="0.4"/>
+              <rect x="6"  y="52" width="9" height="5" rx="2.5" fill="rgba(255,255,255,0.7)"/>
+              <rect x="49" y="52" width="9" height="5" rx="2.5" fill="rgba(255,255,255,0.7)"/>
+            </svg>
+          </div>
+
+          <h2 class="engine-title" style="margin-bottom:6px;">Grading in Progress</h2>
+          <p class="engine-sub" style="margin-bottom:28px;" id="runningExamName">—</p>
+
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-meta">
+              <span class="progress-phase" id="progressPhase">Initialising…</span>
+              <span class="progress-pct"   id="progressPct">0%</span>
+            </div>
+          </div>
+
+          <!-- slow-job warning — hidden until polling detects a stall -->
+          <div id="slowJobWarning" style="display:none;margin-top:20px;padding:12px 16px;border-radius:10px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#92400e;font-size:13px;text-align:left;line-height:1.55;">
+            <strong style="display:block;margin-bottom:4px;">Grading is taking longer than expected.</strong>
+            This question may involve many diagram images or a slow API response.
+            The job will continue automatically — diagrams with no response after
+            <strong>120 s</strong> are skipped and scored 0.
+            You can also <button id="cancelFromWarnBtn" style="background:none;border:none;color:#92400e;font-weight:700;text-decoration:underline;cursor:pointer;padding:0;font-size:13px;">cancel</button> and retry with fewer images.
+          </div>
+
+          <button class="btn-cancel-grading" id="cancelBtn">Cancel</button>
+        </div>
+
+        <!-- ·· SUCCEEDED STATE ·· -->
+        <div id="stateDone" style="display:none;">
+          <div class="bot-ring done-ring">
+            <svg viewBox="0 0 24 24" stroke="white" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+
+          <h2 class="engine-title" style="margin-bottom:6px;">Grading Complete</h2>
+          <p class="engine-sub" style="margin-bottom:28px;" id="doneExamName">—</p>
+
+          <div class="done-stats" id="doneStats"></div>
+
+          <div class="done-actions">
+            <a class="btn-view-results" href="./results-reviews.html" id="viewResultsBtn">
+              View Full Results
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+            <button class="btn-run-again" id="runAgainBtn">Run Again</button>
+          </div>
+        </div>
+
+        <!-- ·· CANCELLED / FAILED STATE ·· -->
+        <div id="stateError" style="display:none;">
+          <div class="bot-ring error-ring">
+            <svg viewBox="0 0 24 24" stroke="white" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h2 class="engine-title" style="margin-bottom:6px;" id="errorTitle">Job Cancelled</h2>
+          <p class="engine-err-msg" id="errorMsg">The grading job was cancelled.</p>
+          <button class="btn-start" id="tryAgainBtn">
+            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Start Again
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Card 5: Report History ──────────────────────────────────────────── -->
+    <div class="ag-card glass" id="reportHistoryCard" style="display:none;">
+      <div class="ag-card-head rh-header--toggle" id="reportHistoryToggle" role="button" aria-expanded="true" aria-controls="reportHistoryBody">
+        <div class="ag-card-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div class="rh-title-group">
+          <span class="ag-card-title">Report History</span>
+          <p class="rh-desc">View all generated grading reports. Download, compare, or manage previous versions.</p>
+        </div>
+        <svg class="rh-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="rh-body open" id="reportHistoryBody">
+        <div class="rh-loading" id="rhLoading">Loading reports…</div>
+      </div>
+    </div>
+
+    <div class="footer-space"></div>
+  </main>
+</div>
+
+<!-- Sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Logout modal -->
+<div class="logout-overlay" id="logoutModal">
+  <div class="logout-modal">
+    <div class="logout-ring">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </div>
+    <h3>Sign out?</h3>
+    <p>You will be redirected to the login page.</p>
+    <div class="logout-actions">
+      <button class="btn-logout-cancel" id="logoutCancelBtn">Cancel</button>
+      <button class="btn-logout-confirm" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel auto-grading confirmation modal -->
+<div class="cancel-confirm-overlay" id="cancelConfirmOverlay">
+  <div class="cancel-confirm-modal">
+    <div class="cancel-confirm-ring">
+      <svg viewBox="0 0 24 24">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <h3>Cancel Auto-Grading?</h3>
+    <p>This will stop the current grading process. Any progress made in this run will be lost. Are you sure you want to cancel?</p>
+    <div class="cancel-confirm-actions">
+      <button class="btn-keep-grading" id="keepGradingBtn">Keep Grading</button>
+      <button class="btn-confirm-cancel" id="confirmCancelBtn">Yes, Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Regrading confirmation modal -->
+<div class="regrade-overlay" id="regradeConfirmOverlay">
+  <div class="regrade-modal">
+    <div class="regrade-ring">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <h3>Students already have grading results</h3>
+    <p id="regradeMsg">Some of these students already have grading results. Do you want to apply the new grading results?</p>
+    <div class="regrade-meta" id="regradeMeta">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      <span id="regradeCount">—</span>
+    </div>
+    <div class="regrade-actions">
+      <button class="btn-apply-results" id="btnApplyResults">Apply new results</button>
+      <button class="btn-keep-results"  id="btnKeepResults">Keep previous results</button>
+    </div>
+  </div>
+</div>
+
+<!-- Activate-report modal -->
+<div class="activate-overlay" id="activateReportOverlay">
+  <div class="activate-modal">
+    <div class="activate-ring">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <h3>A previous grading report already exists</h3>
+    <p>Do you want to use this new grading result as the active report? The previous report will be marked as replaced.</p>
+    <div class="activate-actions">
+      <button class="btn-make-active" id="btnMakeActive">Make new report active</button>
+      <button class="btn-keep-prev"   id="btnKeepPrev">Keep previous active report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete-report confirmation modal -->
+<div class="del-report-overlay" id="delReportOverlay">
+  <div class="del-report-modal">
+    <div class="del-report-ring">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+    <h3>Delete this report?</h3>
+    <p id="delReportMsg">This action cannot be undone.</p>
+    <div id="delActiveWarn" class="rh-del-warn">
+      You are deleting the active report. The next available report will automatically become active, or no active report will remain.
+    </div>
+    <div class="del-report-actions">
+      <button class="btn-del-cancel"  id="btnDelCancel">Cancel</button>
+      <button class="btn-del-confirm" id="btnDelConfirm">Delete Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg id="toastIcon" viewBox="0 0 24 24"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+authGuard();
+
+/* ============================================================
+   GradingApi — real backend integration
+   All calls go through apiFetch() from api.js (adds auth headers).
+   API keys are NEVER in this file — they live in backend/.env.
+   ============================================================ */
+const GradingApi = (function () {
+  'use strict';
+
+  // Per-exam job persistence across page refreshes
+  const _key = (examId) => 'taqdeer_grading_job_' + examId;
+  function _save(examId, jobId) { try { sessionStorage.setItem(_key(examId), String(jobId)); } catch(e) {} }
+  function _load(examId)       { try { return sessionStorage.getItem(_key(examId)); }          catch(e) { return null; } }
+  function _clear(examId)      { try { sessionStorage.removeItem(_key(examId)); }              catch(e) {} }
+
+  async function startJob(examId, payload) {
+    const data = await apiFetch('/grading/start', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ exam_id: examId, ...payload }),
+    });
+    _save(examId, data.job_id);
+    return data;  // { job_id, exam_id, status, progress, message }
+  }
+
+  async function getStatus(jobId) {
+    return apiFetch('/grading/status/' + jobId);
+  }
+
+  async function latestFor(examId) {
+    const savedId = _load(examId);
+    if (savedId) {
+      try { return await getStatus(savedId); }
+      catch(e) { _clear(examId); }
+    }
+    try {
+      const jobs = await apiFetch('/grading/jobs/' + examId);
+      return (jobs && jobs.length) ? jobs[0] : null;
+    } catch(e) { return null; }
+  }
+
+  function clearJob(examId) { _clear(examId); }
+
+  // Download a grading report via fetch (carries the JWT auth token)
+  async function downloadReport(examId, format) {
+    const token    = localStorage.getItem('taqdeer_token');
+    const url      = API_BASE + '/grading/export/' + examId + '?format=' + format;
+    const res      = await fetch(url, {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Export failed (' + res.status + ')');
+    }
+    const blob     = await res.blob();
+    const blobUrl  = URL.createObjectURL(blob);
+    const ext_map  = { csv: 'csv', xlsx: 'xlsx', pdf: 'pdf' };
+    const filename = 'grading_report_' + examId + '.' + (ext_map[format] || format);
+    const a        = document.createElement('a');
+    a.href         = blobUrl;
+    a.download     = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+  }
+
+  // Download a specific report version by report_id
+  async function downloadReportById(reportId, version, examId, format) {
+    const token    = localStorage.getItem('taqdeer_token');
+    const url      = API_BASE + '/reports/' + reportId + '/export?format=' + format;
+    const res      = await fetch(url, {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Export failed (' + res.status + ')');
+    }
+    const blob     = await res.blob();
+    const blobUrl  = URL.createObjectURL(blob);
+    const filename = 'grading_report_v' + version + '_' + examId + '.' + format;
+    const a        = document.createElement('a');
+    a.href         = blobUrl;
+    a.download     = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+  }
+
+  async function listReports(examId) {
+    return apiFetch('/reports/?exam_id=' + examId);
+  }
+
+  async function activateReport(reportId) {
+    return apiFetch('/reports/' + reportId + '/activate', { method: 'POST' });
+  }
+
+  async function deleteReport(reportId) {
+    return apiFetch('/reports/' + reportId, { method: 'DELETE' });
+  }
+
+  async function confirmGrading(jobId, apply) {
+    return apiFetch('/grading/confirm/' + jobId, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ apply }),
+    });
+  }
+
+  return { startJob, getStatus, latestFor, clearJob, downloadReport,
+           downloadReportById, listReports, activateReport, deleteReport,
+           confirmGrading };
+})();
+
+
+/* ============================================================
+   UI Layer — zero grading logic; pure rendering
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ── DOM ─────────────────────────────────────────────────────────────────── */
+  const examSelect      = document.getElementById('examSelect');
+  const statusRow       = document.getElementById('statusRow');
+  const examStatusBadge = document.getElementById('examStatusBadge');
+  const answerFilesVal  = document.getElementById('answerFilesVal');
+  const gradingBasisVal = document.getElementById('gradingBasisVal');
+  const startBtn        = document.getElementById('startBtn');
+  const cancelBtn       = document.getElementById('cancelBtn');
+  const runAgainBtn     = document.getElementById('runAgainBtn');
+  const tryAgainBtn     = document.getElementById('tryAgainBtn');
+
+  const stateIdle    = document.getElementById('stateIdle');
+  const stateRunning = document.getElementById('stateRunning');
+  const stateDone    = document.getElementById('stateDone');
+  const stateError   = document.getElementById('stateError');
+
+  const marksErrorBanner = document.getElementById('marksErrorBanner');
+  const marksErrorList   = document.getElementById('marksErrorList');
+
+  const progressFill    = document.getElementById('progressFill');
+  const progressPhase   = document.getElementById('progressPhase');
+  const progressPct     = document.getElementById('progressPct');
+  const runningExamName = document.getElementById('runningExamName');
+  const doneExamName    = document.getElementById('doneExamName');
+  const doneStats       = document.getElementById('doneStats');
+  const errorTitle      = document.getElementById('errorTitle');
+  const errorMsg        = document.getElementById('errorMsg');
+  const viewResultsBtn  = document.getElementById('viewResultsBtn');
+
+  /* ── State ───────────────────────────────────────────────────────────────── */
+  let activeJobId  = null;
+  let pollingTimer = null;
+  let currentExam  = null;
+  let currentFiles = 0;
+  let hasRubric    = false;
+  let hasAnswerKey = false;
+  let lastJobCompleted    = false;  // tracks if latest job succeeded (for Next button)
+  let modelSelectionLocked = false; // true while a grading job is active
+  const selectedModels = new Set();
+
+  /* ── Student scope state ─────────────────────────────────────────────────── */
+  let scopeMode       = 'all';     // 'all' | 'selected'
+  let scopeStudents   = [];        // [{extraction_id, student_id, student_name, status}]
+  const scopeSelected = new Set(); // extraction_ids chosen by the instructor
+
+  /* ── Helpers ─────────────────────────────────────────────────────────────── */
+  function esc(s) {
+    return String(s || '').replace(/[&"'<>]/g, c => ({'&':'&amp;','"':'&quot;',"'":'&#39;','<':'&lt;','>':'&gt;'}[c]));
+  }
+
+  function _phaseLabel(pct, backendStatus) {
+    if (backendStatus === 'pending') return 'Queued…';
+    if (pct < 5)   return 'Initialising…';
+    if (pct < 40)  return 'Analysing answers…';
+    if (pct < 80)  return 'Cross-validating results…';
+    if (pct < 100) return 'Aggregating scores…';
+    return 'Grading complete';
+  }
+
+  /* ── Toast ───────────────────────────────────────────────────────────────── */
+  const toast     = document.getElementById('toast');
+  const toastMsg  = document.getElementById('toastMsg');
+  const toastIcon = document.getElementById('toastIcon');
+  let   toastT;
+  const ICONS = {
+    success: '<polyline points="20 6 9 17 4 12"/>',
+    error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  };
+  function showToast(msg, type) {
+    clearTimeout(toastT);
+    toastMsg.textContent = msg;
+    toastIcon.innerHTML  = ICONS[type] || ICONS.info;
+    toast.className = 'toast show ' + (type || 'info');
+    toastT = setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+
+  /* ── User chip ───────────────────────────────────────────────────────────── */
+  (function() {
+    const p = JSON.parse(localStorage.getItem('taqdeer_profile') || 'null');
+    if (p) {
+      const av      = document.getElementById('chipAvatar');
+      const nm      = document.getElementById('chipName');
+      const _parts  = (p.fullName || p.email || '').trim().split(/\s+/);
+      const _inits  = _parts.map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || '?';
+      const _avUrl  = p.avatarPath ? API_BASE + '/' + p.avatarPath : null;
+      if (nm) nm.textContent = getDisplayName(p) || p.email || '';
+      if (av) {
+        if (_avUrl) {
+          av.innerHTML = `<img src="${_avUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        } else {
+          av.textContent = _inits;
+        }
+      }
+    }
+  })();
+
+  /* ── Workflow ────────────────────────────────────────────────────────────── */
+  const THIS_STEP = 4;
+  const WF_STEPS  = [
+    {num:1,href:'./manage-exams.html'},
+    {num:2,href:'./rubrics.html'},
+    {num:3,href:'./answer-files.html'},
+    {num:4,href:'./auto-grading.html'},
+    {num:5,href:'./results-reviews.html'},
+  ];
+  const CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  function renderWorkflow(wf) {
+    const completedSteps = (wf && wf.completedSteps) ? wf.completedSteps : [];
+    const currentStep    = (wf && wf.currentStep)    ? wf.currentStep    : THIS_STEP;
+    let completedCount = 0;
+    WF_STEPS.forEach(s => {
+      const el = document.getElementById('wps-'+s.num);
+      if (!el) return;
+      el.classList.remove('completed','active','upcoming');
+      el.onclick = null;
+      let state;
+      if (s.num === currentStep)                                         { state = 'active'; }
+      else if (s.num < currentStep || completedSteps.includes(s.num)) { state = 'completed'; completedCount++; }
+      else                                                             { state = 'upcoming'; }
+      el.classList.add(state);
+      el.querySelector('.wp-bubble').innerHTML = state === 'completed' ? CHECK : s.num;
+      if (state === 'completed') { el.style.cursor = 'pointer'; el.onclick = () => window.location.href = s.href; }
+      else { el.style.cursor = state === 'active' ? 'default' : 'not-allowed'; }
+      el.title = state === 'upcoming' ? 'Complete earlier steps first' : '';
+    });
+    const fill = document.getElementById('wpFill');
+    if (fill) requestAnimationFrame(() => { fill.style.width = (Math.min(completedCount, WF_STEPS.length - 1) / WF_STEPS.length * 100) + '%'; });
+  }
+
+  function updateNextBtn() {
+    const btn    = document.getElementById('progressNextBtn');
+    const hintEl = document.getElementById('nextHint');
+    const examId = examSelect.value;
+
+    let hint;
+    if (!examId) {
+      hint = 'Select an exam to continue';
+    } else if (!lastJobCompleted) {
+      hint = 'Run AI grading first to continue';
+    } else {
+      hint = '';
+    }
+
+    btn.disabled = !!hint;
+    btn.title    = hint || 'Proceed to Review Grades';
+    if (hintEl) { hintEl.textContent = hint; hintEl.style.display = hint ? '' : 'none'; }
+  }
+
+  document.getElementById('progressNextBtn').addEventListener('click', () => {
+    const examId = examSelect.value;
+    if (!examId) return;
+    window.location.href = './results-reviews.html?examId=' + examId;
+  });
+
+  renderWorkflow(null);
+
+  /* ── Sidebar / logout ────────────────────────────────────────────────────── */
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  document.getElementById('sidebarToggle').addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('open'); });
+  overlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); overlay.classList.remove('open'); });
+  const lm = document.getElementById('logoutModal');
+  document.getElementById('logoutTrigger').addEventListener('click', e => { e.preventDefault(); lm.classList.add('active'); });
+  document.getElementById('logoutCancelBtn').addEventListener('click', () => lm.classList.remove('active'));
+
+  /* ── API cache ───────────────────────────────────────────────────────────── */
+  let _examsCache        = [];
+  let _filesCache        = {};
+  let _rubricsCache      = {};
+  let _answerKeyCache    = {};
+  let _modelAnswersCache = {};   // examId → full array of model-answer objects
+
+  function getExams()               { return _examsCache; }
+  function getAnswerFilesCount(eid) { return _filesCache[String(eid)] || 0; }
+  function hasRubricFor(eid)        { return !!_rubricsCache[String(eid)]; }
+  function hasAnswerKeyFor(eid)     { return !!_answerKeyCache[String(eid)]; }
+  function getModelAnswers(eid)     { return _modelAnswersCache[String(eid)] || []; }
+
+  async function _fetchExams() {
+    _examsCache = await apiFetch('/exams/');
+    return _examsCache;
+  }
+  async function _fetchExamDetails(examId) {
+    const [files, rubrics, modelAnswers] = await Promise.all([
+      apiFetch('/answer-files/?exam_id=' + examId),
+      apiFetch('/rubrics/?exam_id=' + examId),
+      apiFetch('/model-answers/?exam_id=' + examId).catch(() => []),
+    ]);
+    _filesCache[String(examId)]        = files.length;
+    _rubricsCache[String(examId)]      = rubrics.length > 0;
+    _answerKeyCache[String(examId)]    = modelAnswers.length > 0;
+    _modelAnswersCache[String(examId)] = Array.isArray(modelAnswers) ? modelAnswers : [];
+  }
+
+  /* ── Load exams ──────────────────────────────────────────────────────────── */
+  async function loadExams() {
+    try {
+      await _fetchExams();
+    } catch (e) {
+      examSelect.innerHTML = '<option value="">Failed to load exams</option>';
+      examSelect.disabled  = true;
+      statusRow.style.display = 'none';
+      return;
+    }
+    const exams = getExams();
+    examSelect.innerHTML = '';
+    if (!exams.length) {
+      examSelect.innerHTML = '<option value="">No exams found</option>';
+      examSelect.disabled  = true;
+      statusRow.style.display = 'none';
+      return;
+    }
+    examSelect.disabled = false;
+    exams.forEach(ex => {
+      const o = document.createElement('option');
+      o.value       = ex.id;
+      o.textContent = ex.name + (ex.section ? ' — ' + ex.section : '');
+      examSelect.appendChild(o);
+    });
+    const _urlId = new URLSearchParams(window.location.search).get('examId');
+    if (_urlId) {
+      const _match = Array.from(examSelect.options).find(o => String(o.value) === _urlId);
+      if (_match) examSelect.value = _match.value;
+    }
+    onExamChange();
+  }
+
+  async function onExamChange() {
+    // Reset lock so a completed/failed run from a previous exam doesn't carry over
+    unlockModelSelection();
+    _hideMarksError();
+
+    // Reset scope selection whenever exam changes (resets pills + panel too)
+    scopeStudents = [];
+    scopeSelected.clear();
+    _setScopeMode('all');
+    _updateScopeCardVisibility();
+
+    const id = examSelect.value;
+    if (!id) {
+      statusRow.style.display = 'none';
+      lastJobCompleted = false;
+      updateStartable();
+      renderWorkflow(null);
+      ReportHistory.loadAndRender(null);   // hide card when no exam selected
+      return;
+    }
+
+    const exams = getExams();
+    currentExam = exams.find(e => String(e.id) === String(id)) || null;
+
+    try {
+      await _fetchExamDetails(id);
+    } catch (e) {
+      currentFiles = 0;
+      hasRubric    = false;
+      hasAnswerKey = false;
+    }
+    currentFiles = getAnswerFilesCount(id);
+    hasRubric    = hasRubricFor(id);
+    hasAnswerKey = hasAnswerKeyFor(id);
+
+    renderStatusRow();
+    updateStartable();
+    renderWorkflow({ currentStep: THIS_STEP, completedSteps: [] });
+
+    // Check for an existing job
+    const job = await GradingApi.latestFor(id);
+
+    if (job && (job.status === 'running' || job.status === 'pending')) {
+      launchPolling(job.job_id, id);
+    } else if (job && job.status === 'completed') {
+      lastJobCompleted = true;
+      updateNextBtn();
+      const stats = await _fetchDoneStats(id);
+      showState('done', { examId: id, stats });
+    } else {
+      lastJobCompleted = false;
+      updateNextBtn();
+      showState('idle');
+    }
+
+    // Report History is independent of job status and model selection.
+    // Always load for the selected exam so existing reports are visible
+    // even when no grading job has run yet or one is still in progress.
+    ReportHistory.loadAndRender(id);
+  }
+
+  examSelect.addEventListener('change', onExamChange);
+
+  /* ── Status row ──────────────────────────────────────────────────────────── */
+  function _gradingBasisValue() {
+    if (hasRubric && hasAnswerKey) return { key: 'both',       cls: 'hybrid',    label: 'Hybrid'     };
+    if (hasRubric)                 return { key: 'rubric',     cls: 'rubric',    label: 'Rubric'     };
+    if (hasAnswerKey)              return { key: 'answer_key', cls: 'answerkey', label: 'Answer Key' };
+    return                                { key: 'answer_key', cls: 'none',      label: '—'          };
+  }
+
+  function _readinessStatus() {
+    if (!hasRubric && !hasAnswerKey) return { cls: 'blocked', label: 'Waiting for rubric or answer key' };
+    if (currentFiles === 0)          return { cls: 'pending', label: 'Waiting for answer files'         };
+    if (!selectedModels.size)        return { cls: 'pending', label: 'Waiting for model selection'      };
+    return                                  { cls: 'ready',   label: 'Ready for grading'                };
+  }
+
+  function _updateReadinessBadge() {
+    if (statusRow.style.display === 'none') return;
+    const r = _readinessStatus();
+    examStatusBadge.className   = 'sv-badge ' + r.cls;
+    examStatusBadge.textContent = r.label;
+  }
+
+  function renderStatusRow() {
+    statusRow.style.display = '';
+    _updateReadinessBadge();
+    answerFilesVal.className   = 'sv-files' + (currentFiles === 0 ? ' zero' : '');
+    answerFilesVal.textContent = currentFiles === 0
+      ? 'No files'
+      : currentFiles + ' file' + (currentFiles !== 1 ? 's' : '');
+    const b = _gradingBasisValue();
+    gradingBasisVal.className   = 'sv-basis ' + b.cls;
+    gradingBasisVal.textContent = b.label;
+  }
+
+  /* ── Model selection lock ───────────────────────────────────────────────── */
+  const _modelGrid    = document.getElementById('modelGrid');
+  const _msLockNotice = document.getElementById('msLockNotice');
+
+  function lockModelSelection() {
+    modelSelectionLocked = true;
+    _modelGrid.classList.add('ms-locked');
+    if (_msLockNotice) _msLockNotice.classList.add('visible');
+  }
+
+  function unlockModelSelection() {
+    modelSelectionLocked = false;
+    _modelGrid.classList.remove('ms-locked');
+    if (_msLockNotice) _msLockNotice.classList.remove('visible');
+  }
+
+  /* ── Model selection ─────────────────────────────────────────────────────── */
+  const _MODEL_NAMES = {
+    claude:    'Claude',
+    openai:    'ChatGPT',
+    deepseek:  'DeepSeek',
+    consensus: 'Collaborative Consensus',
+  };
+
+  function _updateIdleText() {
+    const titleEl = document.getElementById('engineIdleTitle');
+    const subEl   = document.getElementById('engineIdleSub');
+    if (!titleEl || !subEl) return;
+
+    const sel = [...selectedModels];
+    if (!sel.length) {
+      titleEl.textContent = 'Select One or More Grading Models';
+      subEl.textContent   = 'Choose one or more model configurations above to begin grading';
+      return;
+    }
+    if (sel.length === 1 && sel[0] === 'consensus') {
+      titleEl.textContent = 'Collaborative Consensus Grading';
+    } else if (sel.length === 1) {
+      titleEl.textContent = _MODEL_NAMES[sel[0]] + ' Grading';
+    } else {
+      titleEl.textContent = 'Multiple Models Grading';
+    }
+    subEl.textContent = 'The selected grading model(s) will evaluate student answers using the rubric, the answer key, or both.';
+  }
+
+  function _toggleModel(model) {
+    if (model === 'consensus') {
+      // Consensus is mutually exclusive with all individual model cards.
+      // Clicking it deselects everything else first.
+      if (selectedModels.has('consensus')) {
+        selectedModels.delete('consensus');
+      } else {
+        selectedModels.clear();           // remove any individual selections
+        selectedModels.add('consensus');
+      }
+    } else {
+      // Selecting an individual model always deselects consensus first.
+      selectedModels.delete('consensus');
+      if (selectedModels.has(model)) selectedModels.delete(model);
+      else selectedModels.add(model);
+    }
+    document.querySelectorAll('.ms-card').forEach(c => {
+      c.classList.toggle('ms-selected', selectedModels.has(c.dataset.model));
+    });
+    _updateIdleText();
+    updateStartable();
+  }
+
+  document.getElementById('modelGrid').addEventListener('click', e => {
+    if (modelSelectionLocked) return;
+    const card = e.target.closest('.ms-card');
+    if (card && card.dataset.model) _toggleModel(card.dataset.model);
+  });
+
+  // ── AI Model Selection — collapse toggle ──────────────────────────────────
+  (function () {
+    const msCard   = document.getElementById('modelSelectionCard');
+    const msToggle = document.getElementById('modelSelectionToggle');
+    if (!msCard || !msToggle) return;
+    msToggle.addEventListener('click', () => {
+      const collapsed = msCard.classList.toggle('ms-collapsed');
+      msToggle.setAttribute('aria-expanded', String(!collapsed));
+    });
+  })();
+
+  // ── Individual model visibility flag ──────────────────────────────────────
+  // Set to false to instantly restore all individual model cards.
+  // This is purely visual — no DOM removal, no logic change, no side effects.
+  // Selection logic, backend calls, and future re-enable all work unchanged.
+  (function () {
+    const HIDE_INDIVIDUAL_MODELS = true;
+    const HIDDEN_MODELS = ['claude', 'openai', 'deepseek'];
+
+    const grid = document.getElementById('modelGrid');
+    if (!grid) return;
+
+    if (HIDE_INDIVIDUAL_MODELS) {
+      HIDDEN_MODELS.forEach(function (model) {
+        var card = grid.querySelector('[data-model="' + model + '"]');
+        if (card) card.classList.add('model-hidden');
+      });
+      grid.classList.add('ms-solo');
+    } else {
+      HIDDEN_MODELS.forEach(function (model) {
+        var card = grid.querySelector('[data-model="' + model + '"]');
+        if (card) card.classList.remove('model-hidden');
+      });
+      grid.classList.remove('ms-solo');
+    }
+  })();
+
+  // ── Report History — collapse toggle ──────────────────────────────────────
+  (function () {
+    const rhCard   = document.getElementById('reportHistoryCard');
+    const rhToggle = document.getElementById('reportHistoryToggle');
+    const rhBody   = document.getElementById('reportHistoryBody');
+    if (!rhCard || !rhToggle || !rhBody) return;
+    rhToggle.addEventListener('click', () => {
+      const collapsed = rhCard.classList.toggle('rh-collapsed');
+      rhBody.classList.toggle('open',   !collapsed);
+      rhBody.classList.toggle('closed',  collapsed);
+      rhToggle.setAttribute('aria-expanded', String(!collapsed));
+    });
+  })();
+
+  /* ── Start button enable/disable ─────────────────────────────────────────── */
+  function updateStartable() {
+    const hasGradingInput = hasRubric || hasAnswerKey;
+    const scopeInvalid    = scopeMode === 'selected' && scopeSelected.size === 0;
+    const canStart = !!examSelect.value && currentFiles > 0 && hasGradingInput && selectedModels.size > 0 && !activeJobId && !scopeInvalid;
+    startBtn.disabled    = !canStart;
+    tryAgainBtn.disabled = !canStart;
+
+    // Show/hide scope validation error
+    if (scopeValidationErr) {
+      if (scopeInvalid && !!examSelect.value && currentFiles > 0 && hasGradingInput && selectedModels.size > 0 && !activeJobId) {
+        scopeValidationErr.classList.add('show');
+      } else {
+        scopeValidationErr.classList.remove('show');
+      }
+    }
+
+    const startBtnText = document.getElementById('startBtnText');
+    if (startBtnText) {
+      if (canStart)                 { startBtnText.textContent = 'Start Auto-Grading';       }
+      else if (!hasGradingInput)    { startBtnText.textContent = 'Add rubric or answer key'; }
+      else if (currentFiles === 0)  { startBtnText.textContent = 'Upload answer files';      }
+      else if (!selectedModels.size){ startBtnText.textContent = 'Select a grading model';   }
+      else if (scopeInvalid)        { startBtnText.textContent = 'Select students to grade'; }
+      else                          { startBtnText.textContent = 'Start Auto-Grading';       }
+    }
+
+    _updateReadinessBadge();
+    updateNextBtn();
+  }
+
+  /* ── State machine ───────────────────────────────────────────────────────── */
+  function showState(state, ctx) {
+    stateIdle.style.display    = state === 'idle'    ? '' : 'none';
+    stateRunning.style.display = state === 'running' ? '' : 'none';
+    stateDone.style.display    = state === 'done'    ? '' : 'none';
+    stateError.style.display   = state === 'error'   ? '' : 'none';
+
+    if (state === 'running' && ctx) {
+      const ex = getExams().find(e => String(e.id) === String(ctx.examId || ctx.exam_id));
+      runningExamName.textContent = ex ? ex.name : (ctx.examId || ctx.exam_id || '—');
+    }
+
+    if (state === 'done' && ctx) {
+      const examId = ctx.examId || ctx.exam_id;
+      const ex     = getExams().find(e => String(e.id) === String(examId));
+      doneExamName.textContent = ex ? ex.name : String(examId || '—');
+
+      if (ctx.stats) renderDoneStats(ctx.stats);
+
+      // Update view-results link with examId
+      if (viewResultsBtn && examId) {
+        viewResultsBtn.href = './results-reviews.html?examId=' + examId;
+      }
+    }
+
+    if (state === 'error' && ctx) {
+      const isCancelled = ctx.cancelled;
+      errorTitle.textContent = isCancelled ? 'Grading Cancelled' : 'Grading Failed';
+      errorMsg.textContent   = ctx.message
+        || (isCancelled ? 'The grading job was stopped. You can start a new run.' : 'An error occurred. Please try again.');
+    }
+  }
+
+  function renderDoneStats(s) {
+    doneStats.innerHTML = `
+      <div class="done-stat">
+        <span class="done-stat-val">${esc(s.totalAnswers)}</span>
+        <span class="done-stat-lbl">Papers Graded</span>
+      </div>
+      <div class="done-stat">
+        <span class="done-stat-val">${s.averageScore > 0 ? esc(s.averageScore) + '%' : '—'}</span>
+        <span class="done-stat-lbl">Average Score</span>
+      </div>
+    `;
+  }
+
+  async function _fetchDoneStats(examId) {
+    try {
+      const exam = await apiFetch('/exams/' + examId);
+      return {
+        totalAnswers: exam.student_count || currentFiles || 0,
+        averageScore: exam.avg_score ? Math.round(exam.avg_score * 10) / 10 : 0,
+      };
+    } catch(e) {
+      return { totalAnswers: currentFiles || 0, averageScore: 0 };
+    }
+  }
+
+  /* ── Polling ─────────────────────────────────────────────────────────────── */
+  // Threshold (ms) after which the slow-job warning banner becomes visible.
+  const SLOW_JOB_WARNING_MS = 8 * 60 * 1000;  // 8 minutes
+
+  let _pollStartTime  = 0;   // Date.now() when polling began
+  let _lastProgressAt = 0;   // Date.now() when progress last changed
+  let _lastProgress   = -1;  // last seen progress value
+
+  const slowJobWarning     = document.getElementById('slowJobWarning');
+  const cancelFromWarnBtn  = document.getElementById('cancelFromWarnBtn');
+  if (cancelFromWarnBtn) {
+    cancelFromWarnBtn.addEventListener('click', () => {
+      document.getElementById('cancelBtn')?.click();
+    });
+  }
+
+  function stopPolling() {
+    if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+  }
+
+  function launchPolling(jobId, examId) {
+    activeJobId      = jobId;
+    _pollStartTime   = Date.now();
+    _lastProgressAt  = Date.now();
+    _lastProgress    = -1;
+    if (slowJobWarning) slowJobWarning.style.display = 'none';
+    lockModelSelection();
+    updateStartable();
+    showState('running', { examId });
+    stopPolling();
+    _pollTick(jobId, examId);  // immediate first tick
+    pollingTimer = setInterval(() => _pollTick(jobId, examId), 3000);
+  }
+
+  async function _pollTick(jobId, examId) {
+    let s;
+    try {
+      s = await GradingApi.getStatus(jobId);
+    } catch(e) {
+      console.warn('[grading] status poll error:', e.message);
+      return;
+    }
+
+    const pct = s.progress || 0;
+    progressFill.style.width  = pct + '%';
+    progressPct.textContent   = pct + '%';
+    progressPhase.textContent = _phaseLabel(pct, s.status);
+
+    // Track last time progress actually moved
+    if (pct !== _lastProgress) {
+      _lastProgress   = pct;
+      _lastProgressAt = Date.now();
+    }
+
+    // Show slow-job warning if the job has been running for a while AND
+    // progress has been stuck at the same value for > 5 minutes.
+    const totalElapsed    = Date.now() - _pollStartTime;
+    const progressStalled = Date.now() - _lastProgressAt;
+    if (slowJobWarning) {
+      const shouldWarn = (
+        s.status === 'running' &&
+        totalElapsed  > SLOW_JOB_WARNING_MS &&
+        progressStalled > 5 * 60 * 1000    // stuck for 5+ min
+      );
+      slowJobWarning.style.display = shouldWarn ? '' : 'none';
+    }
+
+    if (s.status === 'completed') {
+      stopPolling();
+      GradingApi.clearJob(examId);
+      activeJobId      = null;
+      lastJobCompleted = true;
+      updateStartable();
+      const stats = await _fetchDoneStats(examId);
+      setTimeout(async () => {
+        showState('done', { examId, stats });
+        showToast(stats.totalAnswers + ' papers graded successfully.', 'success');
+        await ReportHistory.onNewJobCompleted(examId);
+      }, 500);
+
+    } else if (s.status === 'awaiting_confirmation') {
+      // All LLM scores are written; existing results were detected.
+      // Stop polling and hand off to the regrading confirmation modal.
+      stopPolling();
+      // Keep the job in sessionStorage so the modal can reference it
+      RegradeConfirm.show(jobId, examId, s.error_message);
+
+    } else if (s.status === 'failed') {
+      stopPolling();
+      GradingApi.clearJob(examId);
+      activeJobId = null;
+      unlockModelSelection();
+      updateStartable();
+      showState('error', { message: s.error_message || 'Grading failed. Please try again.' });
+      showToast(s.error_message || 'Grading failed.', 'error');
+    }
+  }
+
+  /* ── Marks validation ───────────────────────────────────────────────────── */
+  function _validateMarks(examId) {
+    /**
+     * Returns { valid: true } when every question in the answer key has a
+     * score > 0.  Returns { valid: false, invalid: ["Q2", "Q5", ...] } when
+     * one or more questions have a missing or zero score.
+     *
+     * For grouped questions ({"__sub__": [...]}) the parent-level score is
+     * still required to be > 0 because the engine divides it equally among
+     * sub-questions; a zero parent means zero marks for every sub.
+     */
+    const questions = getModelAnswers(examId);
+    if (!questions.length) return { valid: true };   // no answer key yet — backend will catch it
+
+    const invalid = [];
+    for (const q of questions) {
+      const s = parseFloat(q.score);
+      if (!isFinite(s) || s <= 0) {
+        invalid.push('Q' + q.question_number);
+      }
+    }
+    return invalid.length ? { valid: false, invalid } : { valid: true };
+  }
+
+  function _showMarksError(invalid) {
+    marksErrorList.textContent = 'Missing marks: ' + invalid.join(', ');
+    marksErrorBanner.style.display = '';
+  }
+
+  function _hideMarksError() {
+    marksErrorBanner.style.display = 'none';
+    marksErrorList.textContent = '';
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     STUDENT SCOPE
+  ══════════════════════════════════════════════════════════════════════════ */
+  const studentScopeCard   = document.getElementById('studentScopeCard');
+  const studentScopePanel  = document.getElementById('studentScopePanel');
+  const pillAll            = document.getElementById('pillAll');
+  const pillSelected       = document.getElementById('pillSelected');
+  const scopeTableBody     = document.getElementById('scopeTableBody');
+  const scopeTable         = document.getElementById('scopeTable');
+  const scopeLoading       = document.getElementById('scopeLoading');
+  const scopeCheckAll      = document.getElementById('scopeCheckAll');
+  const scopeCountBadge    = document.getElementById('scopeCountBadge');
+  const scopeValidationErr = document.getElementById('scopeValidationErr');
+  const btnSelectUngraded  = document.getElementById('btnSelectUngraded');
+  const btnSelectAll       = document.getElementById('btnSelectAll');
+  const btnClearScope      = document.getElementById('btnClearScope');
+
+  // Status label + badge class from backend GradeStatus value
+  function _scopeStatusBadge(status) {
+    if (!status) return '<span class="gs-badge not-graded">Not graded</span>';
+    const map = {
+      graded:         ['graded',         'Graded'],
+      pending_review: ['pending-review', 'Pending review'],
+      approved:       ['graded',         'Approved'],
+      overridden:     ['graded',         'Overridden'],
+      failed:         ['failed',         'Failed'],
+    };
+    const [cls, label] = map[status] || ['not-graded', 'Not graded'];
+    return `<span class="gs-badge ${cls}">${label}</span>`;
+  }
+
+  // Render the table from scopeStudents (already populated)
+  // Column order matches headers: Student ID | Name | Grading Status
+  function _renderScopeTable() {
+    scopeTableBody.innerHTML = '';
+    for (const s of scopeStudents) {
+      const checked = scopeSelected.has(s.extraction_id) ? 'checked' : '';
+      // Show "Missing ID" badge when student_id is absent (failed extraction, unread ID)
+      const idCell = s.student_id
+        ? esc(s.student_id)
+        : '<span style="font-size:11px;color:#dc2626;font-weight:700;">Missing ID</span>';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="checkbox" data-eid="${s.extraction_id}" ${checked}></td>
+        <td>${idCell}</td>
+        <td>${esc(s.student_name || '—')}</td>
+        <td>${_scopeStatusBadge(s.status)}</td>`;
+      scopeTableBody.appendChild(tr);
+    }
+    _updateScopeCountBadge();
+    _updateScopeCheckAll();
+  }
+
+  function _updateScopeCountBadge() {
+    if (scopeMode === 'selected') {
+      const n = scopeSelected.size;
+      scopeCountBadge.textContent  = n + ' selected';
+      scopeCountBadge.style.display = n > 0 ? '' : 'none';
+    } else {
+      scopeCountBadge.style.display = 'none';
+    }
+  }
+
+  function _updateScopeCheckAll() {
+    if (!scopeStudents.length) { scopeCheckAll.checked = false; scopeCheckAll.indeterminate = false; return; }
+    const n = scopeSelected.size;
+    if (n === 0)                      { scopeCheckAll.checked = false; scopeCheckAll.indeterminate = false; }
+    else if (n === scopeStudents.length) { scopeCheckAll.checked = true;  scopeCheckAll.indeterminate = false; }
+    else                              { scopeCheckAll.checked = false; scopeCheckAll.indeterminate = true; }
+  }
+
+  // Load extractions + current result status for the given exam
+  async function _loadScopeStudents(examId) {
+    scopeLoading.style.display = '';
+    scopeTable.style.display   = 'none';
+    scopeStudents = [];
+    scopeSelected.clear();
+    _updateScopeCountBadge();
+
+    try {
+      // Load extractions (student list) and current results in parallel
+      const [extractions, results] = await Promise.all([
+        apiFetch('/extraction/students/' + examId),
+        apiFetch('/results/?exam_id=' + examId).catch(() => []),
+      ]);
+
+      // Build a map: studentId → GradeStatus
+      // ExamResultRead returns camelCase "studentId" (mapped from exam_results.student_id)
+      const statusMap = {};
+      for (const r of (results || [])) {
+        statusMap[r.studentId] = r.status;
+      }
+
+      // StudentExtractionRead returns camelCase: studentIdNum, studentName
+      scopeStudents = (extractions || []).map(e => ({
+        extraction_id: e.id,
+        student_id:    e.studentIdNum  || null,   // null → shown as "Missing ID" in table
+        student_name:  e.studentName   || null,   // null → shown as "—" in table
+        status:        statusMap[e.studentIdNum] || null,
+      }));
+
+      console.log(
+        '[STUDENT-SCOPE-DATA] count=' + scopeStudents.length +
+        ' first_student=' + JSON.stringify(scopeStudents[0] || null)
+      );
+
+      scopeLoading.style.display = 'none';
+      scopeTable.style.display   = '';
+      _renderScopeTable();
+    } catch (err) {
+      scopeLoading.textContent = 'Failed to load students.';
+    }
+  }
+
+  // Switch scope mode
+  function _setScopeMode(mode) {
+    scopeMode = mode;
+
+    pillAll.classList.toggle('active',      mode === 'all');
+    pillSelected.classList.toggle('active', mode === 'selected');
+
+    if (mode === 'selected') {
+      studentScopePanel.classList.add('open');
+      const examId = examSelect.value;
+      if (examId && !scopeStudents.length) _loadScopeStudents(examId);
+    } else {
+      studentScopePanel.classList.remove('open');
+      scopeValidationErr.classList.remove('show');
+    }
+
+    _updateScopeCountBadge();
+    updateStartable();
+  }
+
+  // Show/hide scope card based on whether an exam is selected
+  function _updateScopeCardVisibility() {
+    const show = !!examSelect.value;
+    studentScopeCard.style.display = show ? '' : 'none';
+    if (!show) {
+      scopeStudents = [];
+      scopeSelected.clear();
+      _setScopeMode('all');
+    }
+  }
+
+  // Radio pill clicks
+  pillAll.addEventListener('click',      () => _setScopeMode('all'));
+  pillSelected.addEventListener('click', () => _setScopeMode('selected'));
+
+  // Checkbox interactions
+  scopeTableBody.addEventListener('change', e => {
+    const cb = e.target.closest('input[type="checkbox"]');
+    if (!cb) return;
+    const eid = parseInt(cb.dataset.eid, 10);
+    if (cb.checked) scopeSelected.add(eid);
+    else            scopeSelected.delete(eid);
+    _updateScopeCountBadge();
+    _updateScopeCheckAll();
+    scopeValidationErr.classList.remove('show');
+    updateStartable();
+  });
+
+  scopeCheckAll.addEventListener('change', () => {
+    if (scopeCheckAll.checked) {
+      scopeStudents.forEach(s => scopeSelected.add(s.extraction_id));
+    } else {
+      scopeSelected.clear();
+    }
+    _renderScopeTable();
+    scopeValidationErr.classList.remove('show');
+    updateStartable();
+  });
+
+  // Quick-action buttons
+  btnSelectUngraded.addEventListener('click', () => {
+    scopeStudents.filter(s => !s.status).forEach(s => scopeSelected.add(s.extraction_id));
+    _renderScopeTable();
+    scopeValidationErr.classList.remove('show');
+    updateStartable();
+  });
+
+  btnSelectAll.addEventListener('click', () => {
+    scopeStudents.forEach(s => scopeSelected.add(s.extraction_id));
+    _renderScopeTable();
+    scopeValidationErr.classList.remove('show');
+    updateStartable();
+  });
+
+  btnClearScope.addEventListener('click', () => {
+    scopeSelected.clear();
+    _renderScopeTable();
+    updateStartable();
+  });
+
+  /* ── Button handlers ─────────────────────────────────────────────────────── */
+  async function _startGrading() {
+    if (!examSelect.value || currentFiles === 0 || !selectedModels.size || (!hasRubric && !hasAnswerKey)) return;
+
+    // ── Marks validation guard ─────────────────────────────────────────────
+    const marksCheck = _validateMarks(examSelect.value);
+    if (!marksCheck.valid) {
+      _showMarksError(marksCheck.invalid);
+      showToast('Please assign marks to all questions before grading.', 'error');
+      return;
+    }
+    _hideMarksError();
+
+    const examId = parseInt(examSelect.value, 10);
+
+    // ── Safety guard: repair any impossible state before building the payload ──
+    // Consensus and individual models are mutually exclusive.
+    // _toggleModel enforces this on every click, but we re-enforce it here so a
+    // stale Set (e.g. from a future refactor) can never silently corrupt the payload.
+    if (selectedModels.has('consensus') && selectedModels.size > 1) {
+      console.warn('[grading] WARN: consensus + individual models both active — correcting to consensus-only');
+      selectedModels.clear();
+      selectedModels.add('consensus');
+      document.querySelectorAll('.ms-card').forEach(c =>
+        c.classList.toggle('ms-selected', selectedModels.has(c.dataset.model))
+      );
+    }
+
+    // ── Build payload ──────────────────────────────────────────────────────────
+    // Consensus mode  → ["claude", "openai"], consensus_enabled: true
+    // Individual mode → exactly the cards the user selected, consensus_enabled: false
+    // Backend accepted values: 'claude', 'openai', 'deepseek', 'qwen'
+    const VALID_MODELS    = ['claude', 'openai', 'deepseek', 'qwen'];
+    const isConsensus     = selectedModels.has('consensus');
+    const selected_models = isConsensus
+      ? ['claude', 'openai']
+      : [...selectedModels].filter(m => VALID_MODELS.includes(m));
+
+    // Guard: selected_models must never be empty before hitting the API
+    if (selected_models.length === 0) {
+      showToast('Please select at least one AI model before starting grading.', 'error');
+      startBtn.disabled    = false;
+      tryAgainBtn.disabled = false;
+      return;
+    }
+
+    const { key: grading_basis } = _gradingBasisValue();
+
+    // Optional general grading instructions from rubrics page localStorage
+    let general_grading_instructions = null;
+    try {
+      const saved = localStorage.getItem('taqdeer_gp_' + examId);
+      if (saved) {
+        const gp = JSON.parse(saved);
+        general_grading_instructions = gp.general_grading_instructions || null;
+      }
+    } catch(e) {}
+
+    // ── Scope: build student_ids list ─────────────────────────────────────────
+    // Empty list = grade all students (backend convention).
+    const student_ids = scopeMode === 'selected' ? [...scopeSelected] : [];
+
+    // Guard: selected-student mode requires at least one student chosen
+    if (scopeMode === 'selected' && student_ids.length === 0) {
+      showToast('Please select at least one student before starting grading.', 'error');
+      startBtn.disabled    = false;
+      tryAgainBtn.disabled = false;
+      return;
+    }
+
+    // ── Full payload log (visible in DevTools before every API call) ───────────
+    const _payload = { exam_id: examId, selected_models, grading_basis, consensus_enabled: isConsensus, general_grading_instructions, student_ids };
+    console.log('[grading] ── payload ────────────────────────────────────────');
+    console.log('[grading] selectedModels (Set):', [...selectedModels]);
+    console.log('[grading] isConsensus:         ', isConsensus);
+    console.log('[grading] selected_models:     ', selected_models);
+    console.log('[grading] grading_basis:       ', grading_basis);
+    console.log('[grading] student_ids:         ', student_ids, scopeMode === 'all' ? '(all students)' : '(selected)');
+    console.log('[grading] full payload:        ', JSON.stringify(_payload, null, 2));
+    console.log('[grading] ─────────────────────────────────────────────────');
+
+    startBtn.disabled    = true;
+    tryAgainBtn.disabled = true;
+
+    let jobData;
+    try {
+      jobData = await GradingApi.startJob(examId, {
+        selected_models,
+        grading_basis,
+        consensus_enabled: isConsensus,
+        general_grading_instructions,
+        student_ids,
+      });
+    } catch(e) {
+      updateStartable();
+      console.error('[grading] startJob failed:', e);
+      // Surface validation errors (e.g. empty list) with a clear message
+      const rawMsg = e.message || '';
+      const userMsg = rawMsg.includes('at least 1 item')
+        ? 'Please select at least one AI model and at least one student before starting grading.'
+        : (rawMsg || 'Failed to start grading. Check your API key configuration.');
+      showState('error', { message: userMsg });
+      showToast(userMsg, 'error');
+      return;
+    }
+
+    launchPolling(jobData.job_id, examId);
+    showToast('Grading started…', 'info');
+  }
+
+  startBtn.addEventListener('click',   _startGrading);
+  tryAgainBtn.addEventListener('click', _startGrading);
+
+  /* ── Cancel confirmation ─────────────────────────────────────────────────── */
+  const cancelConfirmOverlay = document.getElementById('cancelConfirmOverlay');
+  const keepGradingBtn       = document.getElementById('keepGradingBtn');
+  const confirmCancelBtn     = document.getElementById('confirmCancelBtn');
+
+  // The actual cancellation — only called after the user explicitly confirms
+  function _doCancel() {
+    stopPolling();
+    GradingApi.clearJob(examSelect.value);
+    activeJobId = null;
+    unlockModelSelection();
+    updateStartable();
+    showState('error', { cancelled: true });
+    showToast('Grading cancelled.', 'info');
+  }
+
+  cancelBtn.addEventListener('click', () => {
+    if (!activeJobId) return;
+    cancelConfirmOverlay.classList.add('active');
+    // Default focus on the safe option so Enter does NOT accidentally confirm cancel
+    keepGradingBtn.focus();
+  });
+
+  keepGradingBtn.addEventListener('click', () => {
+    cancelConfirmOverlay.classList.remove('active');
+  });
+
+  confirmCancelBtn.addEventListener('click', () => {
+    cancelConfirmOverlay.classList.remove('active');
+    _doCancel();
+  });
+
+  // Escape closes the dialog safely (equivalent to Keep Grading)
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && cancelConfirmOverlay.classList.contains('active')) {
+      cancelConfirmOverlay.classList.remove('active');
+    }
+  });
+  // Clicking the backdrop does nothing — no accidental cancel via outside click
+
+  runAgainBtn.addEventListener('click', _startGrading);
+
+  /* ── Init ────────────────────────────────────────────────────────────────── */
+  loadExams();
+
+  /* ── Expose internals needed by sibling modules (RegradeConfirm) ─────────── */
+  window.GradingUI = {
+    showState,
+    updateStartable,
+    unlockModelSelection,
+    fetchDoneStats: _fetchDoneStats,
+    setActiveJobId:        (v) => { activeJobId      = v; },
+    setLastJobCompleted:   (v) => { lastJobCompleted = v; },
+  };
+
+})();
+
+/* ============================================================
+   Regrading Confirmation Module
+   ============================================================ */
+const RegradeConfirm = (function () {
+  'use strict';
+
+  const overlay       = document.getElementById('regradeConfirmOverlay');
+  const msgEl         = document.getElementById('regradeMsg');
+  const metaEl        = document.getElementById('regradeMeta');
+  const countEl       = document.getElementById('regradeCount');
+  const btnApply      = document.getElementById('btnApplyResults');
+  const btnKeep       = document.getElementById('btnKeepResults');
+
+  let _jobId  = null;
+  let _examId = null;
+
+  function _showToast(msg, type) {
+    const t = document.getElementById('toast');
+    const m = document.getElementById('toastMsg');
+    const i = document.getElementById('toastIcon');
+    if (!t || !m) return;
+    const ICONS = {
+      success: '<polyline points="20 6 9 17 4 12"/>',
+      error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+      info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+    };
+    m.textContent = msg;
+    if (i) i.innerHTML = ICONS[type] || ICONS.info;
+    t.className = 'toast show ' + (type || 'info');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  // Parse the already_graded_count / selected_count from the error_message JSON
+  // that the backend stores when pausing at awaiting_confirmation.
+  function _parseMeta(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch(e) { return null; }
+  }
+
+  function show(jobId, examId, errorMessageJson) {
+    _jobId  = jobId;
+    _examId = examId;
+
+    const meta = _parseMeta(errorMessageJson);
+    const alreadyGraded = meta ? meta.already_graded_count : null;
+    const selectedCount = meta ? meta.selected_count       : null;
+
+    if (alreadyGraded != null) {
+      const isAll = (selectedCount != null && alreadyGraded === selectedCount);
+      if (isAll) {
+        msgEl.textContent = 'All selected students already have grading results. Do you want to apply the new grading results?';
+      } else {
+        msgEl.textContent = `${alreadyGraded} of ${selectedCount} selected student(s) already have grading results. Do you want to apply the new results?`;
+      }
+      countEl.textContent = alreadyGraded + ' student' + (alreadyGraded !== 1 ? 's' : '') + ' will be overwritten';
+      metaEl.style.display = '';
+    } else {
+      msgEl.textContent    = 'Some students already have grading results. Do you want to apply the new grading results?';
+      metaEl.style.display = 'none';
+    }
+
+    overlay.classList.add('active');
+  }
+
+  async function _resolve(apply) {
+    overlay.classList.remove('active');
+    const jobId  = _jobId;
+    const examId = _examId;
+    _jobId  = null;
+    _examId = null;
+
+    // Disable buttons while request is in flight
+    btnApply.disabled = true;
+    btnKeep.disabled  = true;
+
+    try {
+      await GradingApi.confirmGrading(jobId, apply);
+    } catch(e) {
+      _showToast(e.message || 'Confirmation failed.', 'error');
+      btnApply.disabled = false;
+      btnKeep.disabled  = false;
+      return;
+    } finally {
+      btnApply.disabled = false;
+      btnKeep.disabled  = false;
+    }
+
+    GradingApi.clearJob(examId);
+    GradingUI.setActiveJobId(null);
+    GradingUI.setLastJobCompleted(true);
+    GradingUI.unlockModelSelection();
+    GradingUI.updateStartable();
+
+    if (apply) {
+      const stats = await GradingUI.fetchDoneStats(examId);
+      GradingUI.showState('done', { examId, stats });
+      _showToast('New grading results applied successfully.', 'success');
+      await ReportHistory.onNewJobCompleted(examId);
+    } else {
+      // Keep previous — don't switch to the done screen; just return to idle
+      // so the instructor knows the previous results are still active.
+      GradingUI.showState('idle');
+      _showToast('Previous results kept. New grading run saved as draft in Report History.', 'info');
+      ReportHistory.loadAndRender(examId);
+    }
+  }
+
+  btnApply.addEventListener('click', () => _resolve(true));
+  btnKeep.addEventListener ('click', () => _resolve(false));
+
+  // Escape key closes nothing here — the instructor must make an explicit choice.
+
+  return { show };
+})();
+
+/* ============================================================
+   Report History Module
+   ============================================================ */
+const ReportHistory = (function () {
+  'use strict';
+
+  const card        = document.getElementById('reportHistoryCard');
+  const body        = document.getElementById('reportHistoryBody');
+
+  // Activate modal elements
+  const activateOverlay = document.getElementById('activateReportOverlay');
+  const btnMakeActive   = document.getElementById('btnMakeActive');
+  const btnKeepPrev     = document.getElementById('btnKeepPrev');
+
+  // Delete modal elements
+  const delOverlay  = document.getElementById('delReportOverlay');
+  const delWarn     = document.getElementById('delActiveWarn');
+  const delMsg      = document.getElementById('delReportMsg');
+  const btnDelCancel  = document.getElementById('btnDelCancel');
+  const btnDelConfirm = document.getElementById('btnDelConfirm');
+
+  let _currentExamId   = null;
+  let _pendingReportId = null;  // draft report awaiting activation decision
+  let _deleteReportId  = null;  // report queued for deletion confirmation
+  let _deleteIsActive  = false;
+
+  function _fmt(dt) {
+    if (!dt) return '—';
+    const d = new Date(dt);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+         + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function _scopeLabel(scope) {
+    return scope === 'selected' ? 'Selected Students' : 'All Students';
+  }
+
+  function _statusBadge(status) {
+    const map = {
+      active:   ['active',   'Active'],
+      draft:    ['draft',    'Draft'],
+      replaced: ['replaced', 'Replaced'],
+    };
+    const [cls, lbl] = map[status] || ['draft', status];
+    return `<span class="rh-badge ${cls}">${lbl}</span>`;
+  }
+
+  function _dlBtn(label, fmt, reportId, version, examId) {
+    return `<button class="btn-rh-dl" data-rpt="${reportId}" data-fmt="${fmt}" data-ver="${version}" data-exam="${examId}">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      ${label}
+    </button>`;
+  }
+
+  function _render(reports) {
+    if (!reports || !reports.length) {
+      body.innerHTML = '<div class="rh-empty">No reports generated yet.</div>';
+      return;
+    }
+
+    const rows = reports.map(r => `
+      <div class="rh-row">
+        <div class="rh-cell">
+          <span class="rh-label">Version</span>
+          <span class="rh-value">v${r.version_number}</span>
+        </div>
+        <div class="rh-cell">
+          <span class="rh-label">Generated</span>
+          <span class="rh-value" style="font-size:12px;">${_fmt(r.created_at)}</span>
+        </div>
+        <div class="rh-cell">
+          <span class="rh-label">Scope</span>
+          <span class="rh-value">${_scopeLabel(r.scope)}</span>
+        </div>
+        <div class="rh-cell">
+          <span class="rh-label">Papers / Avg</span>
+          <span class="rh-value">${r.student_count != null ? r.student_count : '—'} / ${r.average_score != null ? Number(r.average_score).toFixed(1) + '%' : '—'}</span>
+        </div>
+        <div class="rh-cell">
+          <span class="rh-label">Status</span>
+          ${_statusBadge(r.status)}
+        </div>
+        <div class="rh-downloads">
+          ${_dlBtn('CSV',   'csv',  r.id, r.version_number, r.exam_id)}
+          ${_dlBtn('Excel', 'xlsx', r.id, r.version_number, r.exam_id)}
+          ${_dlBtn('PDF',   'pdf',  r.id, r.version_number, r.exam_id)}
+        </div>
+        <div style="padding:0 0 0 8px;">
+          <button class="btn-rh-del" data-rpt="${r.id}" data-active="${r.is_active}" title="Delete report">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </div>`).join('');
+
+    body.innerHTML = '<div class="rh-list">' + rows + '</div>';
+
+    // Download buttons
+    body.querySelectorAll('.btn-rh-dl').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const rid  = parseInt(btn.dataset.rpt, 10);
+        const fmt  = btn.dataset.fmt;
+        const ver  = btn.dataset.ver;
+        const eid  = btn.dataset.exam;
+        const orig = btn.textContent.trim();
+        btn.textContent = 'Downloading…';
+        btn.disabled = true;
+        try {
+          await GradingApi.downloadReportById(rid, ver, eid, fmt);
+        } catch(e) {
+          _showToast(e.message || 'Download failed.', 'error');
+        } finally {
+          btn.textContent = orig;
+          btn.disabled = false;
+        }
+      });
+    });
+
+    // Delete buttons
+    body.querySelectorAll('.btn-rh-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _deleteReportId = parseInt(btn.dataset.rpt, 10);
+        _deleteIsActive = btn.dataset.active === 'true';
+        delMsg.textContent  = 'Report v' + (reports.find(r => r.id === _deleteReportId)?.version_number || '') + ' will be permanently deleted.';
+        delWarn.classList.toggle('show', _deleteIsActive);
+        delOverlay.classList.add('active');
+      });
+    });
+  }
+
+  // Toast helper (reuse the page-level toast)
+  function _showToast(msg, type) {
+    const t = document.getElementById('toast');
+    const m = document.getElementById('toastMsg');
+    const i = document.getElementById('toastIcon');
+    if (!t || !m) return;
+    const ICONS = {
+      success: '<polyline points="20 6 9 17 4 12"/>',
+      error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+      info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+    };
+    m.textContent = msg;
+    if (i) i.innerHTML = ICONS[type] || ICONS.info;
+    t.className = 'toast show ' + (type || 'info');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  async function loadAndRender(examId) {
+    if (!examId) { card.style.display = 'none'; return; }
+    _currentExamId = examId;
+    card.style.display = '';
+    body.innerHTML = '<div class="rh-loading">Loading reports…</div>';
+    try {
+      const reports = await GradingApi.listReports(examId);
+      _render(reports);
+    } catch(e) {
+      body.innerHTML = '<div class="rh-empty">Could not load reports.</div>';
+    }
+  }
+
+  // Called right after a new grading job completes.
+  // Loads reports, then shows the activation modal if a draft report exists
+  // alongside an already-active one.
+  async function onNewJobCompleted(examId) {
+    _currentExamId = examId;
+    card.style.display = '';
+    body.innerHTML = '<div class="rh-loading">Loading reports…</div>';
+
+    let reports = [];
+    try {
+      reports = await GradingApi.listReports(examId);
+    } catch(e) {
+      body.innerHTML = '<div class="rh-empty">Could not load reports.</div>';
+      return;
+    }
+    _render(reports);
+
+    // Check: is there a draft report AND an already-active one?
+    const draftReport  = reports.find(r => r.status === 'draft');
+    const activeReport = reports.find(r => r.status === 'active');
+
+    if (draftReport && activeReport) {
+      // Prompt the instructor
+      _pendingReportId = draftReport.id;
+      activateOverlay.classList.add('active');
+    }
+    // If no conflict (new report was auto-activated), no modal needed.
+  }
+
+  // Activate modal — "Make new report active"
+  btnMakeActive.addEventListener('click', async () => {
+    activateOverlay.classList.remove('active');
+    if (!_pendingReportId) return;
+    try {
+      await GradingApi.activateReport(_pendingReportId);
+      _showToast('New report is now active.', 'success');
+      if (_currentExamId) await loadAndRender(_currentExamId);
+    } catch(e) {
+      _showToast(e.message || 'Could not activate report.', 'error');
+    }
+    _pendingReportId = null;
+  });
+
+  // Activate modal — "Keep previous active report"
+  btnKeepPrev.addEventListener('click', () => {
+    activateOverlay.classList.remove('active');
+    _pendingReportId = null;
+    _showToast('Previous active report kept. New report saved in history.', 'info');
+  });
+
+  // Delete modal — cancel
+  btnDelCancel.addEventListener('click', () => {
+    delOverlay.classList.remove('active');
+    _deleteReportId = null;
+  });
+
+  // Delete modal — confirm
+  btnDelConfirm.addEventListener('click', async () => {
+    delOverlay.classList.remove('active');
+    const rid = _deleteReportId;
+    _deleteReportId = null;
+    if (!rid) return;
+    try {
+      await GradingApi.deleteReport(rid);
+      _showToast('Report deleted.', 'success');
+      if (_currentExamId) await loadAndRender(_currentExamId);
+    } catch(e) {
+      _showToast(e.message || 'Could not delete report.', 'error');
+    }
+  });
+
+  // Close modals on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      activateOverlay.classList.remove('active');
+      delOverlay.classList.remove('active');
+    }
+  });
+
+  return { loadAndRender, onNewJobCompleted };
+})();
+</script>
+
+</body>
+</html>

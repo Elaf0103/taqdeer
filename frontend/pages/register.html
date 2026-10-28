@@ -1,0 +1,592 @@
+<!-- frontend/pages/register.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Taqdeer | Register</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../assets/taqdeer-logo.png" type="image/png">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    /* ── Validation states ── */
+    .error {
+      color: #d9534f;
+      font-size: 12px;
+      margin-top: 5px;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      min-height: 16px;
+    }
+    .error.show { display: flex; }
+    .error::before {
+      content: '!';
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px; height: 14px;
+      background: #d9534f;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .input.invalid, select.invalid {
+      border-color: #d9534f !important;
+      background: rgba(217, 83, 79, 0.06) !important;
+    }
+    .input.valid, select.valid {
+      border-color: #5cb85c !important;
+    }
+
+    /* ── Input icon wrappers ── */
+    .field { margin-bottom: 14px; }
+    .input-wrap { position: relative; }
+    .input-wrap .field-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px; height: 16px;
+      stroke: rgba(40, 64, 91, 0.4);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+      transition: stroke 0.18s;
+    }
+    .input-wrap .input,
+    .input-wrap select { padding-left: 38px; }
+
+    /* ── Toggle password button ── */
+    .toggle-pw {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: rgba(40, 64, 91, 0.4);
+      display: flex;
+      align-items: center;
+    }
+    .toggle-pw svg {
+      width: 16px; height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .toggle-pw:hover { color: var(--c-arctic); }
+    .input-wrap input[type="password"],
+    .input-wrap input[type="text"] { padding-right: 38px; }
+
+    /* ── Password strength bar ── */
+    .strength-bar {
+      display: flex;
+      gap: 4px;
+      margin-top: 7px;
+    }
+    .strength-seg {
+      height: 4px;
+      flex: 1;
+      border-radius: 2px;
+      background: rgba(208, 223, 235, 0.6);
+      transition: background 0.25s;
+    }
+    .strength-label {
+      font-size: 11px;
+      margin-top: 3px;
+      color: var(--text-muted);
+      min-height: 14px;
+    }
+
+    /* ── Spinner inside btn ── */
+    .btn-primary { position: relative; overflow: hidden; }
+    .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+    /* ── Alert banner ── */
+    .alert-banner {
+      display: none;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 16px;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(217, 83, 79, 0.10);
+      border: 1px solid rgba(217, 83, 79, 0.35);
+      color: #c0392b;
+    }
+    .alert-banner.show { display: flex; }
+    .alert-banner svg {
+      width: 16px; height: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ── Success overlay ── */
+    .success-overlay {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 28px 0 12px;
+    }
+    .success-overlay.show { display: flex; }
+    .check-circle {
+      width: 68px; height: 68px;
+      background: linear-gradient(135deg, #5cb85c, #3d8b3d);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .check-circle svg {
+      width: 32px; height: 32px;
+      stroke: #fff;
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .success-overlay h2 { font-size: 20px; font-weight: 700; color: var(--text-strong); margin-bottom: 6px; }
+    .success-overlay p  { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.6; }
+    .success-overlay .btn { margin-top: 22px; }
+  </style>
+</head>
+
+<body class="bg-frost">
+<div class="auth">
+  <div class="auth-card glass lift">
+
+    <!-- ══ Form section ══════════════════════════════════════════════════════ -->
+    <div id="formSection">
+
+      <!-- Brand -->
+      <div style="text-align:center; margin-bottom:20px;">
+        <img src="../assets/taqdeer-logo.png" alt="Taqdeer" class="logo" style="margin: 0 auto 10px;">
+        <h2>Create Instructor Account</h2>
+        <p class="muted">Register to access Taqdeer platform</p>
+      </div>
+
+      <form id="registerForm" novalidate>
+
+        <!-- Professional Title + Full Name (inline row) -->
+        <div class="field">
+          <label for="fullName">Full Name <span style="font-size:0.78rem;color:var(--c-powder);">(title optional)</span></label>
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <!-- Title dropdown -->
+            <div style="flex:0 0 95px; min-width:80px;">
+              <select id="professionalTitle" name="professionalTitle" class="input"
+                      style="padding:10px 12px; cursor:pointer; width:100%;">
+                <option value="none" selected>None</option>
+                <option value="dr">Dr.</option>
+                <option value="prof">Prof.</option>
+                <option value="mr">Mr.</option>
+                <option value="ms">Ms.</option>
+                <option value="mrs">Mrs.</option>
+                <option value="miss">Miss.</option>
+              </select>
+            </div>
+            <!-- Full Name input -->
+            <div class="input-wrap" style="flex:1 1 0; min-width:160px;">
+              <svg class="field-icon" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <input id="fullName" name="fullName" type="text" class="input"
+                    placeholder="Enter your full name" autocomplete="name" />
+            </div>
+          </div>
+          <div class="error" id="fullNameError" aria-live="polite"></div>
+        </div>
+
+        <!-- Email -->
+        <div class="field">
+          <label for="email">Email Address</label>
+          <div class="input-wrap">
+            <svg class="field-icon" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <polyline points="2,4 12,13 22,4"/>
+            </svg>
+            <input id="email" name="email" type="email" class="input"
+                  placeholder="Enter your email" autocomplete="email" />
+          </div>
+          <div class="error" id="emailError" aria-live="polite"></div>
+        </div>
+
+        <!-- Department -->
+        <div class="field">
+          <label for="department">Department</label>
+          <div class="input-wrap">
+            <svg class="field-icon" viewBox="0 0 24 24">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <select id="department" name="department" class="input">
+              <option value="" disabled selected>Select your department</option>
+              <option value="cs">Computer Science</option>
+              <option value="is">Information Systems</option>
+              <option value="it">Information Technology</option>
+            </select>
+          </div>
+          <div class="error" id="departmentError" aria-live="polite"></div>
+        </div>
+
+        <!-- Password -->
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <svg class="field-icon" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <input id="password" name="password" type="password" class="input"
+                  placeholder="Create a password (min 8 chars)" autocomplete="new-password" />
+            <button type="button" class="toggle-pw" id="togglePw1" aria-label="Toggle password visibility">
+              <svg id="eyeIcon1" viewBox="0 0 24 24">
+                <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <!-- Strength bar -->
+          <div class="strength-bar" id="strengthBar">
+            <div class="strength-seg" id="seg1"></div>
+            <div class="strength-seg" id="seg2"></div>
+            <div class="strength-seg" id="seg3"></div>
+            <div class="strength-seg" id="seg4"></div>
+          </div>
+          <div class="strength-label" id="strengthLabel"></div>
+          <div class="error" id="passwordError" aria-live="polite"></div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="field" style="margin-bottom:20px;">
+          <label for="confirmPassword">Confirm Password</label>
+          <div class="input-wrap">
+            <svg class="field-icon" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <input id="confirmPassword" name="confirmPassword" type="password" class="input"
+                  placeholder="Re-enter your password" autocomplete="new-password" />
+            <button type="button" class="toggle-pw" id="togglePw2" aria-label="Toggle confirm password visibility">
+              <svg id="eyeIcon2" viewBox="0 0 24 24">
+                <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <div class="error" id="confirmPasswordError" aria-live="polite"></div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary" style="width:100%;" id="submitBtn">
+          <span id="btnText">Create Account</span>
+          <span class="spinner" id="spinner"></span>
+        </button>
+
+        <!-- Error banner -->
+        <div class="alert-banner" id="alertBanner" role="alert">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span id="alertMsg"></span>
+        </div>
+
+        <!-- Back to login -->
+        <p class="small" style="text-align:center; margin-top:16px;">
+          Already have an account? <a href="./login.html">Sign in</a>
+        </p>
+
+      </form>
+    </div>
+
+    <!-- ══ Success state ════════════════════════════════════════════════════ -->
+    <div class="success-overlay" id="successSection">
+      <div class="check-circle">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2>Account Created!</h2>
+      <p>Welcome to Taqdeer, <strong id="welcomeName"></strong>.<br>
+        Your instructor account is ready.</p>
+      <a href="./login.html" class="btn btn-primary">Go to Sign In</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    const API_BASE = window.location.hostname.includes('ngrok')
+      ? 'https://YOUR-NGROK-BACKEND-URL.ngrok-free.app'
+      : 'http://localhost:8000';
+    console.log('[API]', API_BASE);
+
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const form           = document.getElementById('registerForm');
+    const titleSelect    = document.getElementById('professionalTitle');
+    const fullNameInput  = document.getElementById('fullName');
+    const emailInput     = document.getElementById('email');
+    const deptSelect     = document.getElementById('department');
+    const passwordInput  = document.getElementById('password');
+    const confirmInput   = document.getElementById('confirmPassword');
+    const submitBtn      = document.getElementById('submitBtn');
+    const btnText        = document.getElementById('btnText');
+    const spinner        = document.getElementById('spinner');
+    const alertBanner    = document.getElementById('alertBanner');
+    const alertMsg       = document.getElementById('alertMsg');
+    const formSection    = document.getElementById('formSection');
+    const successSection = document.getElementById('successSection');
+    const welcomeName    = document.getElementById('welcomeName');
+
+    const errs = {
+      fullName:        document.getElementById('fullNameError'),
+      email:           document.getElementById('emailError'),
+      department:      document.getElementById('departmentError'),
+      password:        document.getElementById('passwordError'),
+      confirmPassword: document.getElementById('confirmPasswordError'),
+    };
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function isValidEmail(v) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    }
+
+    function setErr(input, errEl, msg) {
+      errEl.textContent = msg;
+      errEl.classList.add('show');
+      input.classList.add('invalid');
+      input.classList.remove('valid');
+    }
+
+    function clearErr(input, errEl) {
+      errEl.textContent = '';
+      errEl.classList.remove('show');
+      input.classList.remove('invalid');
+      if (input.value) input.classList.add('valid');
+    }
+
+    function resetField(input, errEl) {
+      errEl.textContent = '';
+      errEl.classList.remove('show');
+      input.classList.remove('invalid', 'valid');
+    }
+
+    function hideAlert() { alertBanner.classList.remove('show'); }
+    function showAlert(msg) { alertMsg.textContent = msg; alertBanner.classList.add('show'); }
+
+    // ── Password strength ──────────────────────────────────────────────────────
+    const segs   = ['seg1','seg2','seg3','seg4'].map(id => document.getElementById(id));
+    const sLabel = document.getElementById('strengthLabel');
+    const COLORS = ['#d9534f','#e6a817','#5bc0de','#5cb85c'];
+    const LABELS = ['Weak','Fair','Good','Strong'];
+
+    function strengthScore(pw) {
+      let s = 0;
+      if (pw.length >= 8)  s++;
+      if (pw.length >= 12) s++;
+      if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
+      if (/\d/.test(pw)) s++;
+      if (/[^A-Za-z0-9]/.test(pw)) s++;
+      return Math.min(Math.ceil(s / 5 * 4), 4);
+    }
+
+    function updateStrength(pw) {
+      if (!pw) {
+        segs.forEach(s => s.style.background = '');
+        sLabel.textContent = '';
+        return;
+      }
+      const lvl = strengthScore(pw);
+      segs.forEach((s, i) => {
+        s.style.background = i < lvl ? COLORS[lvl - 1] : 'rgba(208,223,235,0.6)';
+      });
+      sLabel.textContent = LABELS[lvl - 1] || '';
+      sLabel.style.color = COLORS[lvl - 1] || '';
+    }
+
+    // ── Toggle password ───────────────────────────────────────────────────────
+    const EYE_OPEN   = `<path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>`;
+    const EYE_CLOSED = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+
+    function wireToggle(btnId, inputEl, iconId) {
+      const btn  = document.getElementById(btnId);
+      const icon = document.getElementById(iconId);
+      btn.addEventListener('click', () => {
+        const hidden = inputEl.type === 'password';
+        inputEl.type    = hidden ? 'text' : 'password';
+        icon.innerHTML  = hidden ? EYE_CLOSED : EYE_OPEN;
+        btn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
+      });
+    }
+    wireToggle('togglePw1', passwordInput, 'eyeIcon1');
+    wireToggle('togglePw2', confirmInput,  'eyeIcon2');
+
+    // ── Real-time: Full Name ───────────────────────────────────────────────────
+    fullNameInput.addEventListener('input', () => {
+      hideAlert();
+      const v = fullNameInput.value.trim();
+      if (!v)          return resetField(fullNameInput, errs.fullName);
+      if (v.length < 3) setErr(fullNameInput, errs.fullName, 'Name must be at least 3 characters.');
+      else              clearErr(fullNameInput, errs.fullName);
+    });
+    fullNameInput.addEventListener('blur', () => {
+      if (!fullNameInput.value.trim())
+        setErr(fullNameInput, errs.fullName, 'Full name is required.');
+    });
+
+    // ── Real-time: Email ──────────────────────────────────────────────────────
+    emailInput.addEventListener('input', () => {
+      hideAlert();
+      const v = emailInput.value.trim();
+      if (!v)               return resetField(emailInput, errs.email);
+      if (!isValidEmail(v)) setErr(emailInput, errs.email, 'Please enter a valid email address.');
+      else                  clearErr(emailInput, errs.email);
+    });
+    emailInput.addEventListener('blur', () => {
+      if (!emailInput.value.trim())
+        setErr(emailInput, errs.email, 'Email is required.');
+    });
+
+    // ── Real-time: Department ─────────────────────────────────────────────────
+    deptSelect.addEventListener('change', () => {
+      if (!deptSelect.value) setErr(deptSelect, errs.department, 'Please select your department.');
+      else                   clearErr(deptSelect, errs.department);
+    });
+
+    // ── Real-time: Password ───────────────────────────────────────────────────
+    passwordInput.addEventListener('input', () => {
+      hideAlert();
+      const v = passwordInput.value;
+      updateStrength(v);
+      if (!v)           return resetField(passwordInput, errs.password);
+      if (v.length < 8) setErr(passwordInput, errs.password, 'Password must be at least 8 characters.');
+      else              clearErr(passwordInput, errs.password);
+      // cascade to confirm if already typed
+      if (confirmInput.value) {
+        if (confirmInput.value !== v) setErr(confirmInput, errs.confirmPassword, 'Passwords do not match.');
+        else                          clearErr(confirmInput, errs.confirmPassword);
+      }
+    });
+    passwordInput.addEventListener('blur', () => {
+      if (!passwordInput.value)
+        setErr(passwordInput, errs.password, 'Password is required.');
+    });
+
+    // ── Real-time: Confirm Password ───────────────────────────────────────────
+    confirmInput.addEventListener('input', () => {
+      hideAlert();
+      const v = confirmInput.value;
+      if (!v) return resetField(confirmInput, errs.confirmPassword);
+      if (v !== passwordInput.value) setErr(confirmInput, errs.confirmPassword, 'Passwords do not match.');
+      else                           clearErr(confirmInput, errs.confirmPassword);
+    });
+    confirmInput.addEventListener('blur', () => {
+      if (!confirmInput.value)
+        setErr(confirmInput, errs.confirmPassword, 'Please confirm your password.');
+    });
+
+    // ── Submit ────────────────────────────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const titleVal = titleSelect.value;
+      const fullName = fullNameInput.value.trim();
+      const email    = emailInput.value.trim();
+      const dept     = deptSelect.value;
+      const password = passwordInput.value;
+      const confirm  = confirmInput.value;
+      let ok = true;
+
+      if (!fullName)        { setErr(fullNameInput, errs.fullName, 'Full name is required.');           ok = false; }
+      else if (fullName.length < 3) { setErr(fullNameInput, errs.fullName, 'Name must be at least 3 characters.'); ok = false; }
+
+      if (!email)           { setErr(emailInput, errs.email, 'Email is required.');                      ok = false; }
+      else if (!isValidEmail(email)) { setErr(emailInput, errs.email, 'Please enter a valid email address.'); ok = false; }
+
+      if (!dept)            { setErr(deptSelect, errs.department, 'Please select your department.');      ok = false; }
+
+      if (!password)        { setErr(passwordInput, errs.password, 'Password is required.');             ok = false; }
+      else if (password.length < 8) { setErr(passwordInput, errs.password, 'Password must be at least 8 characters.'); ok = false; }
+
+      if (!confirm)         { setErr(confirmInput, errs.confirmPassword, 'Please confirm your password.'); ok = false; }
+      else if (confirm !== password) { setErr(confirmInput, errs.confirmPassword, 'Passwords do not match.'); ok = false; }
+
+      if (!ok) { showAlert('Please fix the errors above before submitting.'); return; }
+
+      // Call backend
+      submitBtn.disabled    = true;
+      btnText.textContent   = 'Creating account\u2026';
+      spinner.style.display = 'block';
+
+      try {
+        const res = await fetch(API_BASE + '/auth/register', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ fullName, email, department: dept, password, professionalTitle: titleVal }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          if (res.status === 409) {
+            setErr(emailInput, errs.email, 'This email is already registered.');
+          }
+          showAlert(data.detail || 'Registration failed. Please try again.');
+          return;
+        }
+
+        // Success — show overlay (no localStorage write)
+        const _TITLE_LABELS_REG = { dr:'Dr.', prof:'Prof.', mr:'Mr.', ms:'Ms.', mrs:'Mrs.', miss:'Miss.', eng:'Eng.', none:'' };
+        const _titlePrefix = (titleVal && titleVal !== 'none' && _TITLE_LABELS_REG[titleVal]) ? _TITLE_LABELS_REG[titleVal] + ' ' : '';
+        welcomeName.textContent   = _titlePrefix + fullName.split(' ')[0];
+        formSection.style.display = 'none';
+        successSection.classList.add('show');
+
+      } catch (err) {
+        showAlert('Could not reach the server. Please check your connection.');
+      } finally {
+        submitBtn.disabled    = false;
+        btnText.textContent   = 'Create Account';
+        spinner.style.display = 'none';
+      }
+    });
+
+  })();
+</script>
+</body>
+</html>
