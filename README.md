@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="frontend/assets/taqdeer-logo.png" alt="Taqdeer logo" width="110">
+  <img src="docs/banner.png" alt="Taqdeer: AI-assisted grading for paper exams" width="720">
 </p>
 
-<h1 align="center">Taqdeer</h1>
 <p align="center"><b>AI-assisted grading for scanned paper exams, with topic-level learning gap analytics</b></p>
 
 <p align="center">
